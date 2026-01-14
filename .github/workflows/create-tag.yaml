@@ -1,0 +1,31 @@
+name: create-tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-tag:
+    if: >
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create tag
+        run: |
+          TAG=$(jq -r '.["."]' .release-please-manifest.json)
+          echo "Creating tag $TAG"
+          git tag "v${TAG}"
+          git push origin "v${TAG}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+      - name: Unlabel PR
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label "autorelease: pending"
