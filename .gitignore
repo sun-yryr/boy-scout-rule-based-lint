@@ -15,3 +15,5 @@ bsr
 
 # Claude Code
 .claude/
+# Added by goreleaser init:
+dist/
