@@ -6,11 +6,17 @@
 
 ## インストール
 
+**mise**
 ```bash
-go install github.com/sun-yryr/boy-scout-rule-based-lint@latest
+mise use --pin github:sun-yryr/boy-scout-rule-based-lint
 ```
 
-または、リポジトリをクローンしてビルド:
+**go install**
+```bash
+go install github.com/sun-yryr/boy-scout-rule-based-lint/cmd/bsr@latest
+```
+
+**手動ビルド**
 
 ```bash
 git clone https://github.com/sun-yryr/boy-scout-rule-based-lint.git
