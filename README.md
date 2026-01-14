@@ -62,6 +62,16 @@ golangci-lint run ./... 2>&1 | bsr update
 - `file(line,column): message` (Visual Studio形式)
 - `file(line): message`
 
+## 検証済みツール
+
+### Buf
+
+```sh
+$ buf --version
+1.63.0
+$ buf lint | bsr filter
+```
+
 ## コンテキストベースマッチング
 
 bsrは行番号だけでなく、エラー行の前後のコードコンテキストを使用してマッチングを行います。
