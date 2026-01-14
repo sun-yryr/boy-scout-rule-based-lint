@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.5...v0.1.6) (2026-01-14)
+
+
+### Bug Fixes
+
+* go installでbsrがインストールできるようにする ([9f34471](https://github.com/sun-yryr/boy-scout-rule-based-lint/commit/9f3447126bd11503edc366275da7fc591c970903))
+
 ## [0.1.5](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.4...v0.1.5) (2026-01-14)
 
 
