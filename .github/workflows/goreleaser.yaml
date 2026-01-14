@@ -17,6 +17,36 @@ jobs:
         with:
           fetch-depth: 0
       -
+        name: Extract release notes from CHANGELOG.md
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Prefer workflow_dispatch input, fallback to tag name (vX.Y.Z)
+          VERSION="${{ inputs.version }}"
+          if [[ -z "${VERSION}" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+
+          # Extract the section for this version (until the next version header).
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" {p=1}
+            p==1 && $0 ~ "^## \\[" && $0 !~ "^## \\[" ver "\\]" {exit}
+            p==1 {print}
+          ' CHANGELOG.md > release_notes.md
+
+          if [[ ! -s release_notes.md ]]; then
+            echo "release_notes.md is empty (version=$VERSION)" >&2
+            exit 1
+          fi
+
+          echo "Extracted release notes for version: $VERSION"
+          # Keep logs small: show only the first 60 lines.
+          sed -n '1,60p' release_notes.md
+          if [[ "$(wc -l < release_notes.md)" -gt 60 ]]; then
+            echo "(truncated; see release_notes.md artifact inside the job workspace)"
+          fi
+      -
         uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
@@ -24,6 +54,6 @@ jobs:
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: release --clean --release-notes=release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
