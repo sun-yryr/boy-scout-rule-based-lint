@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "file": "internal/context/extractor.go",
+      "message": "Error return value of `file.Close` is not checked (errcheck)",
+      "context_hash": "e01cf7e46e6409c1d4ae197d5dce00f9eb73c7f0c8faa26ae8b3f44c0d5d20d1",
+      "context_lines": [
+        "\t\treturn nil, err",
+        "\t}",
+        "\tdefer file.Close()",
+        "",
+        "\tvar lines []string"
+      ],
+      "count": 1
+    }
+  ]
+}

@@ -25,7 +25,7 @@ go build -o bsr .
 現在のlint出力をすべてベースラインとして登録します:
 
 ```bash
-golangci-lint run ./... 2>&1 | bsr init
+golangci-lint run ./... | bsr init
 ```
 
 ### 新規エラーのフィルタリング
@@ -33,7 +33,7 @@ golangci-lint run ./... 2>&1 | bsr init
 ベースラインに登録されていない新規エラーのみを出力します:
 
 ```bash
-golangci-lint run ./... 2>&1 | bsr filter
+golangci-lint run ./... | bsr filter
 ```
 
 新規エラーがある場合は終了コード1、ない場合は0を返します。
@@ -43,7 +43,7 @@ golangci-lint run ./... 2>&1 | bsr filter
 現在のlint出力でベースラインを上書きします:
 
 ```bash
-golangci-lint run ./... 2>&1 | bsr update
+golangci-lint run ./... | bsr update
 ```
 
 ## オプション
@@ -72,6 +72,14 @@ $ buf --version
 $ buf lint | bsr filter
 ```
 
+### golangci-lint
+
+```sh
+$ golangci-lint --version
+golangci-lint has version 2.8.0 built with go1.25.5 from e2e40021 on 2026-01-07T21:29:47Z
+$ golangci-lint run ./... | bsr filter
+```
+
 ## コンテキストベースマッチング
 
 bsrは行番号だけでなく、エラー行の前後のコードコンテキストを使用してマッチングを行います。
@@ -83,7 +91,7 @@ bsrは行番号だけでなく、エラー行の前後のコードコンテキ�
 # GitHub Actions
 - name: Run lint with baseline
   run: |
-    golangci-lint run ./... 2>&1 | bsr filter
+    golangci-lint run ./... | bsr filter
 ```
 
 ## ライセンス
