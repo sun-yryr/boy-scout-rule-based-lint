@@ -20,8 +20,15 @@ jobs:
       - uses: actions/checkout@v6
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          ref: main
+          fetch-depth: 0
       - name: Create tag
         run: |
+          # Ensure we're tagging the latest main
+          git checkout main
+          git pull --ff-only origin main
+          git fetch --tags --force
+
           TAG=$(jq -r '.["."]' .release-please-manifest.json)
           echo "Creating tag $TAG"
           git tag "v${TAG}"
