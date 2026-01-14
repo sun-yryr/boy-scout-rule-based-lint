@@ -21,4 +21,5 @@ jobs:
           release-type: go
           skip-github-release: true
       - name: Show release_created
-        run: echo "release_created: ${{ steps.release-please.outputs.releases_created }}"
+        run: |
+          echo "release_created: ${{ steps.release-please.outputs.releases_created }}"
