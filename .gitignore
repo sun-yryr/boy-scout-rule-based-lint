@@ -1,0 +1,17 @@
+# Binary
+bsr
+
+# Baseline file (project-specific)
+.bsr-baseline.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Claude Code
+.claude/
