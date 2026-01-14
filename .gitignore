@@ -1,9 +1,6 @@
 # Binary
 bsr
 
-# Baseline file (project-specific)
-.bsr-baseline.json
-
 # IDE
 .idea/
 .vscode/
