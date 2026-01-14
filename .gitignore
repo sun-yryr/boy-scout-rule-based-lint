@@ -14,3 +14,6 @@ bsr
 .claude/
 # Added by goreleaser init:
 dist/
+
+# temporary files
+release_notes.md
