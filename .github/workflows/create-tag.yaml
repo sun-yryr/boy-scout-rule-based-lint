@@ -33,8 +33,9 @@ jobs:
           echo "Creating tag $TAG"
           git tag "v${TAG}"
           git push origin "v${TAG}"
-      - name: Unlabel PR
+      - name: Change PR label to published
         run: |
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "autorelease: published"
           gh pr edit ${{ github.event.pull_request.number }} --remove-label "autorelease: pending"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
