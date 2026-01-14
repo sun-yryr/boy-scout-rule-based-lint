@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.4...v0.1.5) (2026-01-14)
+
+
+### Bug Fixes
+
+* リリースの調整中 ([00d4fbf](https://github.com/sun-yryr/boy-scout-rule-based-lint/commit/00d4fbf651898ddb07e32a8a299ba85e4a14de55))
+
 ## [0.1.4](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.3...v0.1.4) (2026-01-14)
 
 
