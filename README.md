@@ -1,10 +1,12 @@
+[日本語](README_ja.md)
+
 # bsr (Boy Scout Rule)
 
-任意のlintツールにPHPStanのベースラインのような機能を追加するCLIツールです。
+A CLI tool that adds [PHPStan-like baseline](https://phpstan.org/user-guide/baseline) functionality to any lint tool.
 
-「来たときよりも綺麗に」というボーイスカウトルールを実現するために、既存のエラーは許容しつつ新規エラーの追加を防ぎます。
+Based on the Boy Scout Rule — "Leave the code better than you found it" — bsr allows existing errors while preventing new ones from being introduced.
 
-## インストール
+## Installation
 
 **mise**
 ```bash
@@ -16,7 +18,7 @@ mise use --pin github:sun-yryr/boy-scout-rule-based-lint
 go install github.com/sun-yryr/boy-scout-rule-based-lint/cmd/bsr@latest
 ```
 
-**手動ビルド**
+**Manual Build**
 
 ```bash
 git clone https://github.com/sun-yryr/boy-scout-rule-based-lint.git
@@ -24,51 +26,51 @@ cd boy-scout-rule-based-lint
 go build -o bsr .
 ```
 
-## 使い方
+## Usage
 
-### ベースラインの初期化
+### Initialize Baseline
 
-現在のlint出力をすべてベースラインとして登録します:
+Register all current lint output as the baseline:
 
 ```bash
 golangci-lint run ./... | bsr init
 ```
 
-### 新規エラーのフィルタリング
+### Filter New Errors
 
-ベースラインに登録されていない新規エラーのみを出力します:
+Output only new errors that are not in the baseline:
 
 ```bash
 golangci-lint run ./... | bsr filter
 ```
 
-新規エラーがある場合は終了コード1、ない場合は0を返します。
+Returns exit code 1 if new errors are found, 0 otherwise.
 
-### ベースラインの更新
+### Update Baseline
 
-現在のlint出力でベースラインを上書きします:
+Overwrite the baseline with the current lint output:
 
 ```bash
 golangci-lint run ./... | bsr update
 ```
 
-## オプション
+## Options
 
 ```
--b, --baseline string   ベースラインファイルのパス (デフォルト: ".bsr-baseline.json")
--c, --context int       マッチングに使用するコンテキスト行数 (デフォルト: 2)
+-b, --baseline string   Path to the baseline file (default: ".bsr-baseline.json")
+-c, --context int       Number of context lines used for matching (default: 2)
 ```
 
-## 対応フォーマット
+## Supported Formats
 
-以下の形式のlint出力に対応しています:
+The following lint output formats are supported:
 
-- `file:line:column: message` (golangci-lint, eslint, buf など)
+- `file:line:column: message` (golangci-lint, eslint, buf, etc.)
 - `file:line: message`
-- `file(line,column): message` (Visual Studio形式)
+- `file(line,column): message` (Visual Studio format)
 - `file(line): message`
 
-## 検証済みツール
+## Verified Tools
 
 ### Buf
 
@@ -86,12 +88,11 @@ golangci-lint has version 2.8.0 built with go1.25.5 from e2e40021 on 2026-01-07T
 $ golangci-lint run ./... | bsr filter
 ```
 
-## コンテキストベースマッチング
+## Context-Based Matching
 
-bsrは行番号だけでなく、エラー行の前後のコードコンテキストを使用してマッチングを行います。
-これにより、コードの追加・削除で行番号がずれても、同じエラーを正しく追跡できます。
+bsr uses the code context surrounding error lines for matching, not just line numbers. This allows it to correctly track the same errors even when line numbers shift due to code additions or deletions.
 
-## CI/CDでの使用例
+## CI/CD Example
 
 ```yaml
 # GitHub Actions
@@ -100,6 +101,6 @@ bsrは行番号だけでなく、エラー行の前後のコードコンテキ�
     golangci-lint run ./... | bsr filter
 ```
 
-## ライセンス
+## License
 
 MIT
