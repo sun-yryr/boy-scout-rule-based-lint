@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.7](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.6...v0.1.7) (2026-02-15)
+
+
+### Performance Improvements
+
+* Extractでファイルをメモリ全展開しない ([a362928](https://github.com/sun-yryr/boy-scout-rule-based-lint/commit/a36292887493fb8eafad4eb0c46e984fb13638c2))
+* Extractでファイルをメモリ全展開しない ([8c8badc](https://github.com/sun-yryr/boy-scout-rule-based-lint/commit/8c8badc7c85cf9cf6c7a581205167fdf9280d5fd))
+
 ## [0.1.6](https://github.com/sun-yryr/boy-scout-rule-based-lint/compare/v0.1.5...v0.1.6) (2026-01-14)
 
 
