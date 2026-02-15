@@ -17,3 +17,4 @@ dist/
 
 # temporary files
 release_notes.md
+.gocache
