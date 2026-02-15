@@ -28,39 +28,34 @@ func NewExtractor(contextLines int) *Extractor {
 
 // Extract extracts the context around a specific line in a file
 func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
+	// Calculate start and end indices (1-indexed)
+	startIdx := lineNum - e.contextLines
+	endIdx := lineNum + e.contextLines
+
+	if startIdx < 1 {
+		startIdx = 1
+	}
+
+	// Extract context lines
+	var contextLines []string
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var lines []string
 	scanner := bufio.NewScanner(file)
 	currentLine := 0
 	for scanner.Scan() {
 		currentLine++
-		lines = append(lines, scanner.Text())
+		if startIdx <= currentLine && currentLine <= endIdx {
+			contextLines = append(contextLines, scanner.Text())
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, err
-	}
-
-	// Calculate start and end indices (0-indexed)
-	startIdx := lineNum - 1 - e.contextLines
-	endIdx := lineNum - 1 + e.contextLines
-
-	if startIdx < 0 {
-		startIdx = 0
-	}
-	if endIdx >= len(lines) {
-		endIdx = len(lines) - 1
-	}
-
-	// Extract context lines
-	contextLines := make([]string, 0, endIdx-startIdx+1)
-	for i := startIdx; i <= endIdx; i++ {
-		contextLines = append(contextLines, lines[i])
 	}
 
 	// Compute hash
