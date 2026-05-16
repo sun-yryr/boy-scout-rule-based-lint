@@ -27,7 +27,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor(contextLines)
 	store := baseline.NewStore()
-	tagger := scope.NewCtagsTagger()
+	tagger := scope.NewTreesitterTagger()
 
 	bl := baseline.New()
 

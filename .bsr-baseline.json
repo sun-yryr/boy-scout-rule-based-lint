@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "file": "internal/context/extractor.go",
@@ -12,6 +12,7 @@
         "",
         "\tscanner := bufio.NewScanner(file)"
       ],
+      "scope": "go:method:Extractor.Extract",
       "count": 1
     }
   ]

@@ -3,9 +3,12 @@ package scope
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/scope/treesitter"
 )
 
 type tag struct {
@@ -24,6 +27,29 @@ type CtagsTagger struct{}
 
 func NewCtagsTagger() *CtagsTagger {
 	return &CtagsTagger{}
+}
+
+type TreesitterTagger struct{}
+
+func NewTreesitterTagger() *TreesitterTagger {
+	return &TreesitterTagger{}
+}
+
+func (t *TreesitterTagger) Scope(filePath string, lineNum int) (string, error) {
+	lang := languageFromExt(filePath)
+	ext := strings.TrimPrefix(filepath.Ext(filePath), ".")
+
+	source, err := os.ReadFile(filePath)
+	if err != nil {
+		return fileScope(filePath), nil
+	}
+
+	scopeNode, err := treesitter.Analyze(source, lineNum, ext)
+	if err != nil || scopeNode == nil {
+		return fileScope(filePath), nil
+	}
+
+	return fmt.Sprintf("%s:%s:%s", lang, scopeNode.Kind, treesitter.FormatScope(scopeNode)), nil
 }
 
 func (t *CtagsTagger) Scope(filePath string, lineNum int) (string, error) {
