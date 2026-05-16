@@ -7,8 +7,8 @@ import (
 func TestNew(t *testing.T) {
 	bl := New()
 
-	if bl.Version != 1 {
-		t.Errorf("Version = %d, want 1", bl.Version)
+	if bl.Version != 2 {
+		t.Errorf("Version = %d, want 2", bl.Version)
 	}
 	if bl.Len() != 0 {
 		t.Errorf("Len() = %d, want 0", bl.Len())
@@ -186,5 +186,34 @@ func TestBaseline_Len(t *testing.T) {
 	bl.Add(Entry{File: "a.go", Message: "msg", ContextHash: "h1", Count: 1})
 	if bl.Len() != 2 {
 		t.Errorf("Len() after duplicate add = %d, want 2", bl.Len())
+	}
+}
+
+func TestEntry_Scope(t *testing.T) {
+	bl := New()
+	bl.Add(Entry{
+		File:         "main.go",
+		Message:      "error",
+		ContextHash:  "h1",
+		ContextLines: []string{"line 1"},
+		Scope:        "go:func:foo",
+		Count:        1,
+	})
+
+	if bl.Entries[0].Scope != "go:func:foo" {
+		t.Errorf("Scope = %q, want %q", bl.Entries[0].Scope, "go:func:foo")
+	}
+}
+
+func TestBaseline_Add_DifferentScope(t *testing.T) {
+	bl := New()
+	bl.Add(Entry{File: "main.go", Message: "error", ContextHash: "h1", Scope: "go:func:foo", Count: 1})
+	bl.Add(Entry{File: "main.go", Message: "error", ContextHash: "h1", Scope: "go:func:bar", Count: 1})
+
+	if bl.Len() != 1 {
+		t.Errorf("Same file+message+hash should merge regardless of scope: got %d entries, want 1", bl.Len())
+	}
+	if bl.Entries[0].Count != 2 {
+		t.Errorf("Count = %d, want 2", bl.Entries[0].Count)
 	}
 }

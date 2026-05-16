@@ -6,6 +6,7 @@ type Entry struct {
 	Message      string   `json:"message"`
 	ContextHash  string   `json:"context_hash"`
 	ContextLines []string `json:"context_lines"`
+	Scope        string   `json:"scope,omitempty"`
 	Count        int      `json:"count"`
 }
 
@@ -18,7 +19,7 @@ type Baseline struct {
 // New creates a new empty Baseline
 func New() *Baseline {
 	return &Baseline{
-		Version: 1,
+		Version: 2,
 		Entries: []Entry{},
 	}
 }

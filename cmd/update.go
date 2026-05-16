@@ -9,6 +9,7 @@ import (
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/baseline"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/context"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/parser"
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/scope"
 )
 
 var updateCmd = &cobra.Command{
@@ -26,6 +27,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor(contextLines)
 	store := baseline.NewStore()
+	tagger := scope.NewCtagsTagger()
 
 	bl := baseline.New()
 
@@ -42,11 +44,17 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			ctx = &context.Context{Lines: []string{}, Hash: ""}
 		}
 
+		scopeInfo, err := tagger.Scope(issue.File, issue.Line)
+		if err != nil {
+			scopeInfo = ""
+		}
+
 		entry := baseline.Entry{
 			File:         issue.File,
 			Message:      issue.Message,
 			ContextHash:  ctx.Hash,
 			ContextLines: ctx.Lines,
+			Scope:        scopeInfo,
 			Count:        1,
 		}
 
