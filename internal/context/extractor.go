@@ -15,27 +15,15 @@ type Context struct {
 }
 
 // Extractor extracts code context from source files
-type Extractor struct {
-	contextLines int
-}
+type Extractor struct{}
 
 // NewExtractor creates a new Extractor
-func NewExtractor(contextLines int) *Extractor {
-	return &Extractor{
-		contextLines: contextLines,
-	}
+func NewExtractor() *Extractor {
+	return &Extractor{}
 }
 
 // Extract extracts the context around a specific line in a file
 func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
-	// Calculate start and end indices (1-indexed)
-	startIdx := lineNum - e.contextLines
-	endIdx := lineNum + e.contextLines
-
-	if startIdx < 1 {
-		startIdx = 1
-	}
-
 	// Extract context lines
 	var contextLines []string
 
@@ -49,7 +37,7 @@ func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
 	currentLine := 0
 	for scanner.Scan() {
 		currentLine++
-		if startIdx <= currentLine && currentLine <= endIdx {
+		if currentLine == lineNum {
 			contextLines = append(contextLines, scanner.Text())
 		}
 	}

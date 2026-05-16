@@ -1,12 +1,16 @@
 package baseline
 
+type Fingerprints struct {
+	LineHash string `json:"line_hash"`
+}
+
 // Entry represents a single baseline entry
 type Entry struct {
-	File         string   `json:"file"`
-	Message      string   `json:"message"`
-	ContextHash  string   `json:"context_hash"`
-	ContextLines []string `json:"context_lines"`
-	Count        int      `json:"count"`
+	File         string       `json:"file"`
+	Message      string       `json:"message"`
+	SourceLine   string       `json:"source_line"`
+	Count        int          `json:"count"`
+	Fingerprints Fingerprints `json:"fingerprints"`
 }
 
 // Baseline represents a collection of baseline entries
@@ -18,7 +22,7 @@ type Baseline struct {
 // New creates a new empty Baseline
 func New() *Baseline {
 	return &Baseline{
-		Version: 1,
+		Version: 2,
 		Entries: []Entry{},
 	}
 }
@@ -26,12 +30,6 @@ func New() *Baseline {
 // Add adds an entry to the baseline
 // If a matching entry exists (same file, message, and context hash), increment the count
 func (b *Baseline) Add(entry Entry) {
-	for i, e := range b.Entries {
-		if e.File == entry.File && e.Message == entry.Message && e.ContextHash == entry.ContextHash {
-			b.Entries[i].Count++
-			return
-		}
-	}
 	b.Entries = append(b.Entries, entry)
 }
 

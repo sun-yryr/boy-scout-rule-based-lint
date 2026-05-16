@@ -9,7 +9,6 @@ import (
 
 var (
 	baselineFile string
-	contextLines int
 )
 
 var rootCmd = &cobra.Command{
@@ -29,5 +28,4 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&baselineFile, "baseline", "b", ".bsr-baseline.json", "baseline file path")
-	rootCmd.PersistentFlags().IntVarP(&contextLines, "context", "c", 2, "number of context lines for matching")
 }

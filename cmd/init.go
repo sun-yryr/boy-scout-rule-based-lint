@@ -24,7 +24,7 @@ func init() {
 
 func runInit(cmd *cobra.Command, args []string) error {
 	p := parser.NewLineParser()
-	extractor := context.NewExtractor(contextLines)
+	extractor := context.NewExtractor()
 	store := baseline.NewStore()
 
 	bl := baseline.New()
@@ -39,15 +39,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 		ctx, err := extractor.Extract(issue.File, issue.Line)
 		if err != nil {
-			ctx = &context.Context{Lines: []string{}, Hash: ""}
+			// TODO: 全体的にエラーの時はログ出したいよね
+			ctx = &context.Context{Lines: []string{""}, Hash: ""}
 		}
 
 		entry := baseline.Entry{
-			File:         issue.File,
-			Message:      issue.Message,
-			ContextHash:  ctx.Hash,
-			ContextLines: ctx.Lines,
-			Count:        1,
+			File:       issue.File,
+			Message:    issue.Message,
+			SourceLine: ctx.Lines[0],
+			Count:      1,
+			Fingerprints: baseline.Fingerprints{
+				LineHash: ctx.Hash,
+			},
 		}
 
 		bl.Add(entry)
