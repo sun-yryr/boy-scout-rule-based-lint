@@ -11,18 +11,18 @@ import (
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/parser"
 )
 
-var filterCmd = &cobra.Command{
-	Use:   "filter",
-	Short: "Filter lint output against baseline",
+var checkCmd = &cobra.Command{
+	Use:   "check",
+	Short: "Check lint output against baseline",
 	Long:  `Read lint output from stdin and output only issues not in the baseline.`,
-	RunE:  runFilter,
+	RunE:  runCheck,
 }
 
 func init() {
-	rootCmd.AddCommand(filterCmd)
+	rootCmd.AddCommand(checkCmd)
 }
 
-func runFilter(cmd *cobra.Command, args []string) error {
+func runCheck(cmd *cobra.Command, args []string) error {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor(contextLines)
 	store := baseline.NewStore()
