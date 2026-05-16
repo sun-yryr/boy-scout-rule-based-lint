@@ -28,14 +28,5 @@ func (m *Matcher) Match(bl *Baseline, entry Entry) bool {
 		return true
 	}
 
-	// Fallback: if the issue's context couldn't be extracted but
-	// there are baseline entries for the same file+message,
-	// we can optionally be lenient
-	for _, c := range candidates {
-		if c.ContextHash == "" {
-			return true
-		}
-	}
-
 	return false
 }
