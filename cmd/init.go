@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -23,13 +24,22 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
+	n, err := initBaseline(os.Stdin, baselineFile)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "Baseline created with %d entries\n", n)
+	return nil
+}
+
+func initBaseline(stdin io.Reader, baselinePath string) (int, error) {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor()
 	store := baseline.NewStore()
 
 	bl := baseline.New()
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
 		issue, err := p.Parse(line)
@@ -39,14 +49,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 		ctx, err := extractor.Extract(issue.File, issue.Line)
 		if err != nil {
-			// TODO: 全体的にエラーの時はログ出したいよね
 			ctx = &context.Context{Lines: []string{""}, Hash: ""}
+		}
+
+		sourceLine := ""
+		if len(ctx.Lines) > 0 {
+			sourceLine = ctx.Lines[0]
 		}
 
 		entry := baseline.Entry{
 			File:       issue.File,
 			Message:    issue.Message,
-			SourceLine: ctx.Lines[0],
+			SourceLine: sourceLine,
 			Count:      1,
 			Fingerprints: baseline.Fingerprints{
 				LineHash: ctx.Hash,
@@ -57,13 +71,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("reading input: %w", err)
+		return 0, fmt.Errorf("reading input: %w", err)
 	}
 
-	if err := store.Save(baselineFile, bl); err != nil {
-		return fmt.Errorf("saving baseline: %w", err)
+	if err := store.Save(baselinePath, bl); err != nil {
+		return 0, fmt.Errorf("saving baseline: %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Baseline created with %d entries\n", bl.Len())
-	return nil
+	return bl.Len(), nil
 }

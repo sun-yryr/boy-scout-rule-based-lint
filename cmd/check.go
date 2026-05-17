@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -23,24 +24,35 @@ func init() {
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
+	newIssues, err := check(os.Stdin, os.Stdout, baselineFile)
+	if err != nil {
+		return err
+	}
+	if newIssues > 0 {
+		os.Exit(1)
+	}
+	return nil
+}
+
+func check(stdin io.Reader, stdout io.Writer, baselinePath string) (int, error) {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor()
 	store := baseline.NewStore()
 
-	bl, err := store.Load(baselineFile)
+	bl, err := store.Load(baselinePath)
 	if err != nil {
-		return fmt.Errorf("loading baseline: %w", err)
+		return 0, fmt.Errorf("loading baseline: %w", err)
 	}
 
 	matcher := baseline.NewSessionMatcher(bl, baseline.NewExactMatcher())
 
 	newIssues := 0
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
 		issue, err := p.Parse(line)
 		if err != nil {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 			continue
 		}
 
@@ -49,10 +61,15 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			ctx = &context.Context{Lines: []string{""}, Hash: ""}
 		}
 
+		sourceLine := ""
+		if len(ctx.Lines) > 0 {
+			sourceLine = ctx.Lines[0]
+		}
+
 		entry := baseline.Entry{
 			File:       issue.File,
 			Message:    issue.Message,
-			SourceLine: ctx.Lines[0],
+			SourceLine: sourceLine,
 			Count:      1,
 			Fingerprints: baseline.Fingerprints{
 				LineHash: ctx.Hash,
@@ -60,18 +77,14 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 
 		if !matcher.Match(entry) {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 			newIssues++
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("reading input: %w", err)
+		return 0, fmt.Errorf("reading input: %w", err)
 	}
 
-	if newIssues > 0 {
-		os.Exit(1)
-	}
-
-	return nil
+	return newIssues, nil
 }
