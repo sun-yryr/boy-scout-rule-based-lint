@@ -24,14 +24,15 @@ func init() {
 
 func runCheck(cmd *cobra.Command, args []string) error {
 	p := parser.NewLineParser()
-	extractor := context.NewExtractor(contextLines)
+	extractor := context.NewExtractor()
 	store := baseline.NewStore()
-	matcher := baseline.NewMatcher()
 
 	bl, err := store.Load(baselineFile)
 	if err != nil {
 		return fmt.Errorf("loading baseline: %w", err)
 	}
+
+	matcher := baseline.NewSessionMatcher(bl, baseline.NewExactMatcher())
 
 	newIssues := 0
 	scanner := bufio.NewScanner(os.Stdin)
@@ -45,17 +46,20 @@ func runCheck(cmd *cobra.Command, args []string) error {
 
 		ctx, err := extractor.Extract(issue.File, issue.Line)
 		if err != nil {
-			ctx = &context.Context{Lines: []string{}, Hash: ""}
+			ctx = &context.Context{Lines: []string{""}, Hash: ""}
 		}
 
 		entry := baseline.Entry{
-			File:         issue.File,
-			Message:      issue.Message,
-			ContextHash:  ctx.Hash,
-			ContextLines: ctx.Lines,
+			File:       issue.File,
+			Message:    issue.Message,
+			SourceLine: ctx.Lines[0],
+			Count:      1,
+			Fingerprints: baseline.Fingerprints{
+				LineHash: ctx.Hash,
+			},
 		}
 
-		if !matcher.Match(bl, entry) {
+		if !matcher.Match(entry) {
 			fmt.Println(line)
 			newIssues++
 		}
