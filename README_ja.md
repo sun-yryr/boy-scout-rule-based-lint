@@ -45,13 +45,6 @@ golangci-lint run ./... | bsr filter
 ```
 
 新規エラーがある場合は終了コード1、ない場合は0を返します。
-
-### ベースラインの更新
-
-現在のlint出力でベースラインを上書きします:
-
-```bash
-golangci-lint run ./... | bsr update
 ```
 
 ## オプション

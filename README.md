@@ -45,13 +45,6 @@ golangci-lint run ./... | bsr filter
 ```
 
 Returns exit code 1 if new errors are found, 0 otherwise.
-
-### Update Baseline
-
-Overwrite the baseline with the current lint output:
-
-```bash
-golangci-lint run ./... | bsr update
 ```
 
 ## Options
