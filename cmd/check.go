@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -94,6 +95,9 @@ func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string
 	for scanner.Scan() {
 		line := scanner.Text()
 		issue, err := p.Parse(line)
+		if errors.Is(err, parser.ErrSkipLine) {
+			continue
+		}
 		if err != nil {
 			fmt.Fprintln(stdout, line)
 			continue
