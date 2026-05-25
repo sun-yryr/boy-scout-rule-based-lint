@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -9,11 +10,16 @@ import (
 
 var (
 	ErrInvalidFormat = errors.New("invalid line format")
+	ErrSkipLine      = errors.New("skip line")
 )
 
 // LineParser parses lint output in file:line:column:message format
 type LineParser struct {
-	patterns []*regexp.Regexp
+	patterns       []*regexp.Regexp
+	eslintIssue    *regexp.Regexp
+	eslintSummary  []*regexp.Regexp
+	filePathSuffix *regexp.Regexp
+	currentFile    string
 }
 
 // NewLineParser creates a new LineParser
@@ -29,6 +35,12 @@ func NewLineParser() *LineParser {
 			// file(line): message (Visual Studio style without column)
 			regexp.MustCompile(`^(.+?)\((\d+)\):\s*(.+)$`),
 		},
+		eslintIssue: regexp.MustCompile(`^(\d+):(\d+)\s+(?:error|warning)\s+(.+?\S)\s{2,}(\S+)\s*$`),
+		eslintSummary: []*regexp.Regexp{
+			regexp.MustCompile(`^\s*✖\s+\d+\s+problems?`),
+			regexp.MustCompile(`potentially fixable`),
+		},
+		filePathSuffix: regexp.MustCompile(`\.\w{1,10}$`),
 	}
 }
 
@@ -36,7 +48,7 @@ func NewLineParser() *LineParser {
 func (p *LineParser) Parse(line string) (*Issue, error) {
 	line = strings.TrimSpace(line)
 	if line == "" {
-		return nil, ErrInvalidFormat
+		return nil, ErrSkipLine
 	}
 
 	// Try each pattern
@@ -74,5 +86,43 @@ func (p *LineParser) Parse(line string) (*Issue, error) {
 		return issue, nil
 	}
 
+	if p.currentFile != "" {
+		if matches := p.eslintIssue.FindStringSubmatch(line); matches != nil {
+			lineNum, _ := strconv.Atoi(matches[1])
+			column, _ := strconv.Atoi(matches[2])
+			message := strings.TrimSpace(matches[3])
+			ruleID := matches[4]
+
+			return &Issue{
+				File:    p.currentFile,
+				Line:    lineNum,
+				Column:  column,
+				Message: fmt.Sprintf("%s (%s)", message, ruleID),
+				Raw:     line,
+			}, nil
+		}
+	}
+
+	for _, pattern := range p.eslintSummary {
+		if pattern.MatchString(line) {
+			return nil, ErrSkipLine
+		}
+	}
+
+	if p.isESLintFilePathLine(line) {
+		p.currentFile = line
+		return nil, ErrSkipLine
+	}
+
 	return nil, ErrInvalidFormat
+}
+
+func (p *LineParser) isESLintFilePathLine(line string) bool {
+	if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+		return false
+	}
+	if strings.Contains(line, "/") || strings.Contains(line, `\`) {
+		return true
+	}
+	return p.filePathSuffix.MatchString(line)
 }

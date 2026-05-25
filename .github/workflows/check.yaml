@@ -16,8 +16,8 @@ jobs:
           go-version-file: 'go.mod'
       - uses: jdx/mise-action@v3
       - name: Build
-        run: go build -o bsr .
+        run: go build ./...
       - name: Test
         run: go test -v ./...
       - name: Lint
-        run: golangci-lint run ./... | ./bsr filter
+        run: golangci-lint run ./...

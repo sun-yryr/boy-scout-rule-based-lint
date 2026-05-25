@@ -149,7 +149,9 @@ func GetDiff(baseRef string) (*ChangeSet, error) {
 	}
 	cs, err := ParseDiff(stdout)
 	if err != nil {
-		cmd.Wait()
+		if waitErr := cmd.Wait(); waitErr != nil {
+			return nil, fmt.Errorf("parsing diff: %w; git wait: %w", err, waitErr)
+		}
 		return nil, fmt.Errorf("parsing diff: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {

@@ -23,7 +23,7 @@ func NewExtractor() *Extractor {
 }
 
 // Extract extracts the context around a specific line in a file
-func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
+func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err error) {
 	// Extract context lines
 	var contextLines []string
 
@@ -31,7 +31,11 @@ func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	currentLine := 0
