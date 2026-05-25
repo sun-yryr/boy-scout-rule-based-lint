@@ -12,6 +12,7 @@ import (
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/context"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/diff"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/parser"
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/reporter"
 )
 
 var (
@@ -78,9 +79,16 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+type lintChecker struct {
+	parser    *parser.LineParser
+	extractor *context.Extractor
+	matcher   *baseline.SessionMatcher
+	changeSet *diff.ChangeSet
+	policy    string
+	reporter  *reporter.Reporter
+}
+
 func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string, changeSet *diff.ChangeSet) (int, error) {
-	p := parser.NewLineParser()
-	extractor := context.NewExtractor()
 	store := baseline.NewStore()
 
 	bl, err := store.Load(baselinePath)
@@ -88,61 +96,23 @@ func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string
 		return 0, fmt.Errorf("loading baseline: %w", err)
 	}
 
-	matcher := baseline.NewSessionMatcher(bl, baseline.NewExactMatcher())
+	c := &lintChecker{
+		parser:    parser.NewLineParser(),
+		extractor: context.NewExtractor(),
+		matcher:   baseline.NewSessionMatcher(bl, baseline.NewExactMatcher()),
+		changeSet: changeSet,
+		policy:    policy,
+		reporter:  reporter.NewReporter(stdout),
+	}
 
-	newIssues := 0
 	scanner := bufio.NewScanner(stdin)
 	for scanner.Scan() {
-		line := scanner.Text()
-		issue, err := p.Parse(line)
-		if errors.Is(err, parser.ErrSkipLine) {
-			continue
+		stop, err := c.handleLine(scanner.Text())
+		if stop {
+			return c.reporter.NewIssues(), nil
 		}
 		if err != nil {
-			fmt.Fprintln(stdout, line)
-			continue
-		}
-
-		if changeSet != nil {
-			switch policy {
-			case "file":
-				if changeSet.HasFile(issue.File) {
-					fmt.Fprintln(stdout, line)
-					newIssues++
-					continue
-				}
-			case "hunk":
-				if changeSet.HasLine(issue.File, issue.Line) {
-					fmt.Fprintln(stdout, line)
-					newIssues++
-					continue
-				}
-			}
-		}
-
-		ctx, err := extractor.Extract(issue.File, issue.Line)
-		if err != nil {
-			ctx = &context.Context{Lines: []string{""}, Hash: ""}
-		}
-
-		sourceLine := ""
-		if len(ctx.Lines) > 0 {
-			sourceLine = ctx.Lines[0]
-		}
-
-		entry := baseline.Entry{
-			File:       issue.File,
-			Message:    issue.Message,
-			SourceLine: sourceLine,
-			Count:      1,
-			Fingerprints: baseline.Fingerprints{
-				LineHash: ctx.Hash,
-			},
-		}
-
-		if !matcher.Match(entry) {
-			fmt.Fprintln(stdout, line)
-			newIssues++
+			return c.reporter.NewIssues(), err
 		}
 	}
 
@@ -150,6 +120,54 @@ func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string
 		return 0, fmt.Errorf("reading input: %w", err)
 	}
 
-	return newIssues, nil
+	return c.reporter.NewIssues(), nil
 }
 
+func (c *lintChecker) handleLine(line string) (stop bool, err error) {
+	issue, parseErr := c.parser.Parse(line)
+	if errors.Is(parseErr, parser.ErrSkipLine) {
+		return false, nil
+	}
+	if parseErr != nil {
+		return c.reporter.Report(line)
+	}
+
+	if c.changeSet != nil {
+		switch c.policy {
+		case "file":
+			if c.changeSet.HasFile(issue.File) {
+				return c.reporter.Report(line)
+			}
+		case "hunk":
+			if c.changeSet.HasLine(issue.File, issue.Line) {
+				return c.reporter.Report(line)
+			}
+		}
+	}
+
+	ctx, err := c.extractor.Extract(issue.File, issue.Line)
+	if err != nil {
+		ctx = &context.Context{Lines: []string{""}, Hash: ""}
+	}
+
+	sourceLine := ""
+	if len(ctx.Lines) > 0 {
+		sourceLine = ctx.Lines[0]
+	}
+
+	entry := baseline.Entry{
+		File:       issue.File,
+		Message:    issue.Message,
+		SourceLine: sourceLine,
+		Count:      1,
+		Fingerprints: baseline.Fingerprints{
+			LineHash: ctx.Hash,
+		},
+	}
+
+	if !c.matcher.Match(entry) {
+		return c.reporter.Report(line)
+	}
+
+	return false, nil
+}
