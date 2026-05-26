@@ -1,19 +1,33 @@
 [English](README.md)
 
-# bsr (Boy Scout Rule)
+# bsr
 
-任意のlintツールに[PHPStanのベースライン](https://phpstan.org/user-guide/baseline)のような機能を追加するCLIツールです。
+bsr は、ボーイスカウトルール（「来たときよりも綺麗に」）をlintツールに持ち込むためのCLIです。
+任意のlintツールの出力を受け取り、ベースラインに記録済みのエラーを抑制したうえで新規エラーのみを報告します。これにより、既存の違反が大量にあっても厳しいルールを導入でき、必要に応じて「触ったコードは綺麗にしてからマージしなければならない」という運用を可能にします。
 
-「来たときよりも綺麗に」というボーイスカウトルールを実現するために、既存のエラーは許容しつつ新規エラーの追加を防ぎます。
+このツールは [PHPStanのベースライン機能](https://phpstan.org/user-guide/baseline) から着想を得ています。
+
+## 特徴
+
+- **lintツール非依存** — golangci-lint、ESLint、buf など、`file:line:...` 形式の出力を持つツールならそのまま使えます
+- **行内容ベースのマッチング** — 行番号ではなくソース行内容のSHA-256ハッシュでエラーを識別します。該当行を編集するとハッシュが変わり、エラーは新規として再検出されます
+- **カウントによる抑制上限** — ベースラインに記録された件数を超えて抑制しません。1件のエントリが多数の同一エラーを覆い隠すことはありません
+- **Boy Scout Policy** — どの範囲を「触った」と判定してベースラインを無効にするか調節できます
+- **Gitネイティブ** — `--base-ref` を指定するだけで、ベースリファレンスからの差分（`base...HEAD`）で変更箇所を判定します
+- **CI向き** — 新規エラーがあるときだけ終了コード1を返します
 
 ## インストール
 
-**mise**
+GitHub Release からダウンロードするか、以下の方法でインストールしてください。
+
+**mise**（推奨）
+
 ```bash
 mise use --pin github:sun-yryr/boy-scout-rule-based-lint
 ```
 
 **go install**
+
 ```bash
 go install github.com/sun-yryr/boy-scout-rule-based-lint/cmd/bsr@latest
 ```
@@ -28,97 +42,196 @@ go build -o bsr .
 
 ## 使い方
 
-### ベースラインの初期化
-
-現在のlint出力をすべてベースラインとして登録します:
+### 1. ベースラインの初期化
 
 ```bash
 golangci-lint run ./... | bsr init
 ```
 
-### 新規エラーのフィルタリング
+現在のlint違反をすべて記録した `.bsr-baseline.json` が生成されます。これをリポジトリにコミットしてください。
 
-ベースラインに登録されていない新規エラーのみを出力します:
+### 2. 新規違反の検出
 
 ```bash
 golangci-lint run ./... | bsr check
 ```
 
-新規エラーがある場合は終了コード1、ない場合は0を返します。
+- ベースラインに存在しない違反のみが出力されます
+- 新規違反がある場合は終了コード1、ない場合は0を返します
+- ベースラインで抑制された違反は出力されません
+
+### 3. Boy Scout Policy
+
+デフォルトの設定（ベースラインだけの運用）では、汚いファイルに変更を入れても既存のエラーを直さずにマージできてしまいます。Boy Scout Policy を有効にすると、このブランチで変更したファイルや行についてはベースラインを無視し、そこにあるエラーをすべて報告します。
+
+```bash
+# 変更したファイル内のエラーは、ベースラインに関係なくすべて報告
+golangci-lint run ./... | bsr check --boy-scout-policy file --base-ref origin/main
+
+# 変更した行（hunk内）のエラーのみ報告
+golangci-lint run ./... | bsr check --boy-scout-policy hunk --base-ref origin/main
 ```
+
+| ポリシー | 動作 | 想定ユースケース |
+|----------|------|------------------|
+| `off`（デフォルト） | ベースラインがコードベース全体で有効 | 通常のベースライン運用 |
+| `file` | 変更したファイル内のエラーはベースラインを無視 | ファイルに触ったらファイル全体を綺麗にする |
+| `hunk` | 変更行（hunk内）のエラーのみベースラインを無視 | 大きなファイルの部分修正で触った行だけを直す |
+| `scope` | 計画中 — 関数／メソッド単位での無効化 | 触ったコードと同じスコープは綺麗にしてからマージする |
+
+ポリシーを `off` 以外で使う場合は `--base-ref`（通常は `origin/main`）を指定してください。
+
+## 仕組み
+
+### マッチング戦略
+
+bsrは2種類のマッチング戦略を内部に持っていますが、現時点で利用されるのは Exact のみです。CLIから切り替える手段は提供していません。
+
+#### Exact マッチング（現在のデフォルト）
+
+`bsr init` はエラーが発生したソース行を読み取り、空白を正規化したうえでSHA-256ハッシュを計算してエントリに記録します。
+
+```json
+{
+  "file": "internal/foo.go",
+  "message": "error return value not checked",
+  "source_line": "if err := do(); err != nil {",
+  "count": 1,
+  "fingerprints": {
+    "line_hash": "a1b2c3..."
+  }
+}
+```
+
+`bsr check` 時も同じ処理を行い、ハッシュが一致すれば該当エントリで抑制します（後述の `count` の範囲内で）。
+
+行内容で識別するため、無関係な行の追加・削除では追跡が壊れません。逆に該当行を編集するとハッシュが変わり、エラーは新規として浮上します。これがbsrの「触ったコードから綺麗になっていく」挙動を支えています。
+
+#### Loose マッチング
+
+`file:message` をキーにする緩いマッチング戦略も実装してあります。フォーマット変更などで行内容が変わっても抑制が維持される反面、同じファイル・同じメッセージのエラーであれば別の場所で発生したものも抑制してしまうため、CLIからは利用できません。
+
+### カウントによる抑制の上限
+
+各ベースラインエントリは、そのエラーの発生回数（`count`）を保持しています。1回の `check` 実行では、ベースラインに記録された回数までしか抑制されません。たとえば `count: 1` のエントリに対して同じキーのエラーが2件発生した場合、2件目は新規エラーとして報告されます。
+
+### Boy Scout Policy の実装
+
+`git diff --unified=0 <base-ref>...HEAD` を実行して変更されたファイル・行範囲を計算し、指定されたポリシーに応じて該当箇所のベースライン抑制を無効化します。
 
 ## オプション
 
+### 全サブコマンド共通
+
 ```
--b, --baseline string   ベースラインファイルのパス (デフォルト: ".bsr-baseline.json")
--c, --context int       マッチングに使用するコンテキスト行数 (デフォルト: 2)
+-b, --baseline string   ベースラインファイルのパス（デフォルト: .bsr-baseline.json）
+```
+
+### bsr check
+
+```
+--boy-scout-policy string   ボーイスカウトポリシー: off, file, hunk（デフォルト: off）
+--base-ref string           Gitのベースリファレンス（例: origin/main）
+                            ポリシーが off 以外の場合は必須
 ```
 
 ## 対応フォーマット
 
-以下の形式のlint出力に対応しています:
+bsrは以下のlint出力形式に対応しています。
 
-- `file:line:column: message` (golangci-lint, ESLint unix形式, buf など)
-- `file:line: message`
-- `file(line,column): message` (Visual Studio形式)
-- `file(line): message`
-- ESLint stylish形式 (ESLintのデフォルト出力; ファイルパス行 + インデント付きissue行)
+| フォーマット | 例 | 主な対応ツール |
+|--------------|----|----------------|
+| `file:line:column: message` | `main.go:42:3: unused variable x` | golangci-lint、ESLint unix形式、buf など |
+| `file:line: message` | `main.go:42: unused variable x` | 一部のlintツール |
+| `file(line,column): message` | `main.go(42,3): unused variable x` | Visual Studio / MSBuild 形式 |
+| `file(line): message` | `main.go(42): unused variable x` | 一部のツール |
+| ESLint stylish形式 | ファイルパス行＋インデントされたissue行 | ESLintのデフォルト出力 |
 
-## 検証済みツール
+パースできない行はそのまま標準出力にパススルーされます（サマリー行など）。
+
+## 動作確認済みのlintツール
+
+### golangci-lint
+
+```bash
+golangci-lint run ./... | bsr init
+golangci-lint run ./... | bsr check
+```
 
 ### ESLint
 
-**デフォルト出力 (stylish)**
+**デフォルト出力（stylish）** — 追加設定なしで動作します。
 
-追加設定は不要です:
-
-```sh
+```bash
 eslint . | bsr init
 eslint . | bsr check
 ```
 
-**unix形式** (1行1issue, `file:line:column: message`)
+**unix形式**（1行1件）
 
-```sh
-# ESLint 8 以前 (unixフォーマッターはコアに含まれる)
+```bash
+# ESLint 8 以前: unix フォーマッターはコアに含まれる
 eslint -f unix . | bsr check
 
-# ESLint 9 以降 (unixフォーマッターはコアから分離)
+# ESLint 9 以降: unix フォーマッターはコアから分離
 npm install -D eslint-formatter-unix
 eslint -f unix . | bsr check
 ```
 
-ESLint v9.0.0 以降、`unix` フォーマッターはコアに含まれなくなりました。[`eslint-formatter-unix`](https://www.npmjs.com/package/eslint-formatter-unix) パッケージを別途インストールしてください。詳細は [ESLint v9 移行ガイド](https://eslint.org/docs/latest/use/migrate-to-9.0.0) を参照してください。
+ESLint v9.0.0 以降は `unix` フォーマッターがコアから外れているため、[`eslint-formatter-unix`](https://www.npmjs.com/package/eslint-formatter-unix) パッケージを別途インストールしてください（詳細は [ESLint v9 移行ガイド](https://eslint.org/docs/latest/use/migrate-to-9.0.0) を参照）。
 
 ### Buf
 
-```sh
-$ buf --version
-1.63.0
-$ buf lint | bsr check
+```bash
+buf lint | bsr check
 ```
-
-### golangci-lint
-
-```sh
-$ golangci-lint --version
-golangci-lint has version 2.8.0 built with go1.25.5 from e2e40021 on 2026-01-07T21:29:47Z
-$ golangci-lint run ./... | bsr check
-```
-
-## コンテキストベースマッチング
-
-bsrは行番号だけでなく、エラー行の前後のコードコンテキストを使用してマッチングを行います。
-これにより、コードの追加・削除で行番号がずれても、同じエラーを正しく追跡できます。
 
 ## CI/CDでの使用例
 
+### 基本形（新規エラーのみ検出）
+
 ```yaml
-# GitHub Actions
-- name: Run lint with baseline
+- name: Lint with baseline
   run: |
     golangci-lint run ./... | bsr check
 ```
+
+### Boy Scout Policy を有効にする場合
+
+```yaml
+- name: Checkout with full history
+  uses: actions/checkout@v6
+  with:
+    fetch-depth: 0   # git diff のために履歴が必要
+
+- name: Run linter with Boy Scout policy
+  run: |
+    golangci-lint run ./... | bsr check \
+      --boy-scout-policy hunk \
+      --base-ref origin/main
+```
+
+## ロードマップ
+
+**実装済み**
+
+- `bsr init` / `bsr check`
+- ソース行ハッシュによる Exact マッチング
+- カウントによる抑制の上限
+- Boy Scout Policy: `file` と `hunk`
+- ESLint stylish 形式の対応
+
+**設計中・計画中**
+
+- `scope` ポリシー（tree-sitter による関数／メソッド単位の判定）
+- より賢いマッチング戦略（周辺コンテキストの類似度、スコープ考慮など）
+- `prune` コマンド（使われなくなったベースラインエントリの整理）
+- `--format=github-actions`（GitHub Actions アノテーションへのネイティブ対応）
+
+## コントリビュート
+
+- バグ報告・機能要望は GitHub Issues へお願いします
+- 新しいlintツールのフォーマット対応も歓迎です
 
 ## ライセンス
 
