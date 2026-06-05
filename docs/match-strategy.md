@@ -20,6 +20,7 @@ type MatchStrategy interface {
 }
 
 type SessionMatcher struct {
+    baseline  *Baseline
     strategy  MatchStrategy
     remaining map[string]int // GroupKey -> remaining count
 }
@@ -30,6 +31,7 @@ type SessionMatcher struct {
 ```go
 func NewSessionMatcher(bl *Baseline, s MatchStrategy) *SessionMatcher {
     sm := &SessionMatcher{
+        baseline:  bl,
         strategy:  s,
         remaining: make(map[string]int, len(bl.Entries)),
     }
@@ -62,7 +64,7 @@ func (sm *SessionMatcher) Match(current Entry) bool {
 
 ```go
 func (s *ExactMatcher) GroupKey(e Entry) string {
-    return e.File + ":" + e.ContextHash
+    return e.File + ":" + e.Fingerprints.LineHash
 }
 
 func (s *ExactMatcher) Match(base, current Entry) (bool, string) {
@@ -80,7 +82,7 @@ GroupKey がそのままマッチ判定。1:1。
 
 ```go
 func (s *LooseMatcher) GroupKey(e Entry) string {
-    return e.File + ":" + e.Rule // message でなく rule で集約
+    return e.File + ":" + e.Message
 }
 
 func (s *LooseMatcher) Match(base, current Entry) (bool, string) {
@@ -162,8 +164,8 @@ func Prune(bl *Baseline, currentIssues []Entry, s MatchStrategy) *Baseline {
 
 | 戦略 | マッチ判定 | GroupKey | remainingキー | prune判定 |
 |------|-----------|----------|--------------|-----------|
-| `exact` | context_hash 比較 | `file:context_hash` | 同左 | context_hash 比較 |
-| `loose` | file+rule 比較 | `file:rule` | 同左 | file+rule 比較 |
+| `exact` | line_hash 比較 | `file:line_hash` | 同左 | line_hash 比較 |
+| `loose` | file+message 比較 | `file:message` | 同左 | file+message 比較 |
 | `smart` | **スコアリング** | `file:line:col:rule` | 同左 | **スコアリング** |
 | `scope` | **スコアリング** | `file:line:col:rule` | 同左 | **スコアリング** |
 
