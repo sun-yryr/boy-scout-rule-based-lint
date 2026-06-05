@@ -36,6 +36,7 @@ func ParseDiff(r io.Reader) (*ChangeSet, error) {
 	}
 
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	var currentFile string
 	var newLine int
 	var inHunk bool

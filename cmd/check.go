@@ -106,6 +106,7 @@ func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string
 	}
 
 	scanner := bufio.NewScanner(stdin)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		stop, err := c.handleLine(scanner.Text())
 		if stop {
