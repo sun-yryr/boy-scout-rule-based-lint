@@ -148,7 +148,7 @@ func (c *lintChecker) handleLine(line string) (stop bool, err error) {
 
 	ctx, err := c.extractor.Extract(issue.File, issue.Line)
 	if err != nil {
-		ctx = &context.Context{Lines: []string{""}, Hash: ""}
+		return false, fmt.Errorf("extracting context for %s:%d: %w", issue.File, issue.Line, err)
 	}
 
 	sourceLine := ""

@@ -50,7 +50,7 @@ func initBaseline(stdin io.Reader, baselinePath string) (int, error) {
 
 		ctx, err := extractor.Extract(issue.File, issue.Line)
 		if err != nil {
-			ctx = &context.Context{Lines: []string{""}, Hash: ""}
+			return 0, fmt.Errorf("extracting context for %s:%d: %w", issue.File, issue.Line, err)
 		}
 
 		sourceLine := ""
