@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -24,7 +25,10 @@ func NewExtractor() *Extractor {
 
 // Extract extracts the context around a specific line in a file
 func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err error) {
-	// Extract context lines
+	if lineNum <= 0 {
+		return nil, fmt.Errorf("invalid line number %d: must be positive", lineNum)
+	}
+
 	var contextLines []string
 
 	file, err := os.Open(filePath)
@@ -39,10 +43,13 @@ func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err err
 
 	scanner := bufio.NewScanner(file)
 	currentLine := 0
+	found := false
 	for scanner.Scan() {
 		currentLine++
 		if currentLine == lineNum {
 			contextLines = append(contextLines, scanner.Text())
+			found = true
+			break
 		}
 	}
 
@@ -50,7 +57,10 @@ func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err err
 		return nil, err
 	}
 
-	// Compute hash
+	if !found {
+		return nil, fmt.Errorf("line %d not found in %s", lineNum, filePath)
+	}
+
 	hash := computeHash(contextLines)
 
 	return &Context{

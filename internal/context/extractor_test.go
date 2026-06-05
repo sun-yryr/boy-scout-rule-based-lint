@@ -80,6 +80,37 @@ func TestExtractor_Extract_FileNotFound(t *testing.T) {
 	}
 }
 
+func TestExtractor_Extract_InvalidLineNum(t *testing.T) {
+	content := `line 1
+line 2
+line 3`
+
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.go")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		lineNum int
+	}{
+		{name: "zero line number", lineNum: 0},
+		{name: "negative line number", lineNum: -1},
+		{name: "line number beyond file", lineNum: 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := NewExtractor()
+			_, err := e.Extract(tmpFile, tt.lineNum)
+			if err == nil {
+				t.Errorf("Extract() lineNum=%d: expected error, got nil", tt.lineNum)
+			}
+		})
+	}
+}
+
 func TestExtractor_HashNormalization(t *testing.T) {
 	tmpDir := t.TempDir()
 
