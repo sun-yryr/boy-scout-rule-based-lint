@@ -27,8 +27,7 @@ func New() *Baseline {
 	}
 }
 
-// Add adds an entry to the baseline
-// If a matching entry exists (same file, message, and context hash), increment the count
+// Add appends an entry to the baseline without checking for duplicates
 func (b *Baseline) Add(entry Entry) {
 	b.Entries = append(b.Entries, entry)
 }
