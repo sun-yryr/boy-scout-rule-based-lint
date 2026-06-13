@@ -122,13 +122,13 @@ bsr runs `git diff --unified=0 <base-ref>...HEAD` to compute changed files and l
 
 ### Common to all subcommands
 
-```
+```text
 -b, --baseline string   Path to the baseline file (default: .bsr-baseline.json)
 ```
 
 ### bsr check
 
-```
+```text
 --boy-scout-policy string   Boy Scout policy: off, file, hunk (default: off)
 --base-ref string           Git base ref (e.g. origin/main)
                             Required when the policy is not off
