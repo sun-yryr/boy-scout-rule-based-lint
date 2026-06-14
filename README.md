@@ -49,6 +49,8 @@ golangci-lint run ./... | bsr init
 
 This generates `.bsr-baseline.json` with every current lint violation. Commit it to your repository.
 
+When run from an interactive terminal, `bsr init` prompts for optional Boy Scout Policy settings and stores them in the baseline `config`. In non-interactive environments (for example, when stdin is a pipe), the prompt is skipped and no `config` is written.
+
 ### 2. Detect new violations
 
 ```bash
@@ -62,6 +64,31 @@ golangci-lint run ./... | bsr check
 ### 3. Boy Scout Policy
 
 With the default configuration (baseline only), you can modify a dirty file and merge it without fixing any of its existing errors. Enable the Boy Scout Policy and bsr ignores the baseline for files or lines you changed on this branch. Every error in those locations is reported.
+
+You can store the default policy in `.bsr-baseline.json` so `bsr check` does not need flags on every run:
+
+```json
+{
+  "version": 2,
+  "config": {
+    "boy_scout_policy": "hunk",
+    "base_ref": "origin/main"
+  },
+  "entries": []
+}
+```
+
+CLI flags override baseline config when specified:
+
+```bash
+# Uses config from .bsr-baseline.json
+golangci-lint run ./... | bsr check
+
+# Temporarily override the stored policy
+golangci-lint run ./... | bsr check --boy-scout-policy file
+```
+
+You can also pass everything on the command line:
 
 ```bash
 # All errors in changed files are reported, regardless of the baseline
@@ -78,7 +105,13 @@ golangci-lint run ./... | bsr check --boy-scout-policy hunk --base-ref origin/ma
 | `hunk` | Baseline is ignored only for errors on changed lines (inside hunks) | Only the lines you touched need to be clean (useful for large files) |
 | `scope` | Planned — baseline ignored at function/method granularity | If you touch the function, clean the function |
 
-Pass `--base-ref` (typically `origin/main`) whenever the policy is not `off`.
+Pass `--base-ref` (typically `origin/main`) whenever the policy is not `off`, or store it in baseline `config`.
+
+Resolution order for `bsr check`:
+
+1. CLI flags (`--boy-scout-policy`, `--base-ref`) when explicitly provided
+2. Baseline `config`
+3. Defaults (`off`, empty `base_ref`)
 
 ## How it works
 
@@ -130,8 +163,10 @@ bsr runs `git diff --unified=0 <base-ref>...HEAD` to compute changed files and l
 
 ```text
 --boy-scout-policy string   Boy Scout policy: off, file, hunk (default: off)
+                            Overrides baseline config when provided
 --base-ref string           Git base ref (e.g. origin/main)
                             Required when the policy is not off
+                            Overrides baseline config when provided
 ```
 
 ## Supported formats

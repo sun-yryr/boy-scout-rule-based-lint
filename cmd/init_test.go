@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ func TestInitBaseline_ValidLines(t *testing.T) {
 		"main.go:3:1: func main is unused",
 	}, "\n")
 
-	n, err := initBaseline(strings.NewReader(input), baselinePath)
+	n, err := initBaseline(strings.NewReader(input), baselinePath, io.Discard)
 	if err != nil {
 		t.Fatalf("initBaseline() err = %v", err)
 	}
@@ -66,7 +67,7 @@ func TestInitBaseline_SkipsInvalidAndSummaryLines(t *testing.T) {
 		"main.go:1:1: package main has no comments",
 	}, "\n")
 
-	n, err := initBaseline(strings.NewReader(input), baselinePath)
+	n, err := initBaseline(strings.NewReader(input), baselinePath, io.Discard)
 	if err != nil {
 		t.Fatalf("initBaseline() err = %v", err)
 	}
@@ -80,7 +81,7 @@ func TestInitBaseline_EmptyInput(t *testing.T) {
 	chdirTo(t, workDir)
 
 	baselinePath := filepath.Join(workDir, "baseline.json")
-	n, err := initBaseline(strings.NewReader(""), baselinePath)
+	n, err := initBaseline(strings.NewReader(""), baselinePath, io.Discard)
 	if err != nil {
 		t.Fatalf("initBaseline() err = %v", err)
 	}
@@ -110,7 +111,7 @@ func TestInitBaseline_MissingSourceFile(t *testing.T) {
 	chdirTo(t, workDir)
 
 	baselinePath := filepath.Join(workDir, "baseline.json")
-	_, err := initBaseline(strings.NewReader("missing.go:1:1: undefined symbol"), baselinePath)
+	_, err := initBaseline(strings.NewReader("missing.go:1:1: undefined symbol"), baselinePath, io.Discard)
 	if err == nil {
 		t.Fatal("initBaseline() err = nil, want error for missing source file")
 	}

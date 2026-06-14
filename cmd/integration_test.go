@@ -42,7 +42,7 @@ func runScenario(t *testing.T, dir string) {
 	chdirTo(t, workDir)
 
 	baselinePath := filepath.Join(t.TempDir(), "baseline.json")
-	n, err := initBaseline(strings.NewReader(baselineInput), baselinePath)
+	n, err := initBaseline(strings.NewReader(baselineInput), baselinePath, io.Discard)
 	if err != nil {
 		t.Fatalf("initBaseline(): %v", err)
 	}
@@ -54,8 +54,10 @@ func runScenario(t *testing.T, dir string) {
 		copyScenarioSources(t, absDir, workDir, "after")
 	}
 
+	bl := loadBaseline(t, baselinePath)
+
 	var stdout bytes.Buffer
-	newCount, err := check(strings.NewReader(checkInput), &stdout, baselinePath, "off", nil)
+	newCount, err := check(strings.NewReader(checkInput), &stdout, bl, "off", nil)
 	if err != nil {
 		t.Fatalf("check(): %v", err)
 	}

@@ -35,41 +35,41 @@ Boy Scout Policy:
 
 func init() {
 	checkCmd.Flags().StringVar(&boyScoutPolicy, "boy-scout-policy", "off",
-		"Boy Scout policy: off, file, hunk, scope")
+		"Boy Scout policy: off, file, hunk, scope (overrides baseline config)")
 	checkCmd.Flags().StringVar(&baseRef, "base-ref", "",
-		"Git base ref for Boy Scout policy (e.g. origin/main)")
+		"Git base ref for Boy Scout policy (e.g. origin/main; overrides baseline config)")
 	rootCmd.AddCommand(checkCmd)
 }
 
-var validPolicies = map[string]bool{
-	"off":   true,
-	"file":  true,
-	"hunk":  true,
-	"scope": true,
-}
-
 func runCheck(cmd *cobra.Command, args []string) error {
-	if !validPolicies[boyScoutPolicy] {
-		return fmt.Errorf("invalid --boy-scout-policy %q: valid values are off, file, hunk, scope", boyScoutPolicy)
+	store := baseline.NewStore()
+	bl, err := store.Load(baselineFile)
+	if err != nil {
+		return fmt.Errorf("loading baseline: %w", err)
 	}
 
-	if boyScoutPolicy == "scope" {
-		return fmt.Errorf("--boy-scout-policy=scope is not yet available")
+	policyChanged := cmd.Flags().Changed("boy-scout-policy")
+	baseRefChanged := cmd.Flags().Changed("base-ref")
+
+	policy, err := resolveCheckPolicy(boyScoutPolicy, policyChanged, bl)
+	if err != nil {
+		return err
 	}
+
+	resolvedBaseRef := resolveCheckBaseRef(baseRef, baseRefChanged, bl)
 
 	var changeSet *diff.ChangeSet
-	if boyScoutPolicy != "off" {
-		if baseRef == "" {
-			return fmt.Errorf("--base-ref is required when --boy-scout-policy is not 'off'")
+	if policy != "off" {
+		if resolvedBaseRef == "" {
+			return fmt.Errorf("base-ref is required when boy-scout-policy is not 'off'")
 		}
-		var err error
-		changeSet, err = diff.GetDiff(baseRef)
+		changeSet, err = diff.GetDiff(resolvedBaseRef)
 		if err != nil {
-			return fmt.Errorf("computing diff against %s: %w", baseRef, err)
+			return fmt.Errorf("computing diff against %s: %w", resolvedBaseRef, err)
 		}
 	}
 
-	newIssues, err := check(os.Stdin, os.Stdout, baselineFile, boyScoutPolicy, changeSet)
+	newIssues, err := check(os.Stdin, os.Stdout, bl, policy, changeSet)
 	if err != nil {
 		return err
 	}
@@ -88,14 +88,7 @@ type lintChecker struct {
 	reporter  *reporter.Reporter
 }
 
-func check(stdin io.Reader, stdout io.Writer, baselinePath string, policy string, changeSet *diff.ChangeSet) (int, error) {
-	store := baseline.NewStore()
-
-	bl, err := store.Load(baselinePath)
-	if err != nil {
-		return 0, fmt.Errorf("loading baseline: %w", err)
-	}
-
+func check(stdin io.Reader, stdout io.Writer, bl *baseline.Baseline, policy string, changeSet *diff.ChangeSet) (int, error) {
 	c := &lintChecker{
 		parser:    parser.NewLineParser(),
 		extractor: context.NewExtractor(),

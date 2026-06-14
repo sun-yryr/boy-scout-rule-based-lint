@@ -4,6 +4,12 @@ type Fingerprints struct {
 	LineHash string `json:"line_hash"`
 }
 
+// Config holds optional baseline-level settings.
+type Config struct {
+	BoyScoutPolicy string `json:"boy_scout_policy,omitempty"`
+	BaseRef        string `json:"base_ref,omitempty"`
+}
+
 // Entry represents a single baseline entry
 type Entry struct {
 	File         string       `json:"file"`
@@ -16,6 +22,7 @@ type Entry struct {
 // Baseline represents a collection of baseline entries
 type Baseline struct {
 	Version int     `json:"version"`
+	Config  *Config `json:"config,omitempty"`
 	Entries []Entry `json:"entries"`
 }
 

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/baseline"
 )
 
 func writeTestFile(t *testing.T, dir, name, content string) {
@@ -33,4 +35,15 @@ func chdirTo(t *testing.T, dir string) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("Chdir(%q): %v", dir, err)
 	}
+}
+
+func loadBaseline(t *testing.T, path string) *baseline.Baseline {
+	t.Helper()
+
+	store := baseline.NewStore()
+	bl, err := store.Load(path)
+	if err != nil {
+		t.Fatalf("Load(%q): %v", path, err)
+	}
+	return bl
 }
