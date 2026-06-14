@@ -20,31 +20,31 @@ func TestExactMatcher(t *testing.T) {
 	m := NewExactMatcher()
 
 	tests := []struct {
-		name     string
-		base     Entry
-		current  Entry
-		wantKey  string
+		name      string
+		base      Entry
+		current   Entry
+		wantKey   string
 		wantMatch bool
 	}{
 		{
-			name:     "same file and hash match",
-			base:     entry("main.go", "err", "abc", 1),
-			current:  entry("main.go", "err", "abc", 1),
-			wantKey:  "main.go:abc",
+			name:      "same file and hash match",
+			base:      entry("main.go", "err", "abc", 1),
+			current:   entry("main.go", "err", "abc", 1),
+			wantKey:   "main.go:abc",
 			wantMatch: true,
 		},
 		{
-			name:     "same file different hash",
-			base:     entry("main.go", "err", "abc", 1),
-			current:  entry("main.go", "err", "def", 1),
-			wantKey:  "",
+			name:      "same file different hash",
+			base:      entry("main.go", "err", "abc", 1),
+			current:   entry("main.go", "err", "def", 1),
+			wantKey:   "",
 			wantMatch: false,
 		},
 		{
-			name:     "different file same hash",
-			base:     entry("main.go", "err", "abc", 1),
-			current:  entry("other.go", "err", "abc", 1),
-			wantKey:  "",
+			name:      "different file same hash",
+			base:      entry("main.go", "err", "abc", 1),
+			current:   entry("other.go", "err", "abc", 1),
+			wantKey:   "",
 			wantMatch: false,
 		},
 	}

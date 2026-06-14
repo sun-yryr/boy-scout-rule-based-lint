@@ -1,0 +1,1 @@
+main.go:2:1: empty line

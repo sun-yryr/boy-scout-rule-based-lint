@@ -1,0 +1,2 @@
+main.go:2:1: empty line
+main.go:3:1: func main is unused
