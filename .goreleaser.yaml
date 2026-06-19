@@ -23,6 +23,8 @@ builds:
       - windows
       - darwin
     binary: bsr
+    ldflags:
+      - -X github.com/sun-yryr/boy-scout-rule-based-lint/cmd.version={{ .Version }}
 
 archives:
   - formats: [tar.gz]

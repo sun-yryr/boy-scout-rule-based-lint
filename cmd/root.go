@@ -9,11 +9,13 @@ import (
 
 var (
 	baselineFile string
+	version      = "0.0.0"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "bsr",
-	Short: "Boy Scout Rule - lint baseline filter",
+	Use:     "bsr",
+	Version: version,
+	Short:   "Boy Scout Rule - lint baseline filter",
 	Long: `bsr is a tool that filters lint output based on a baseline.
 It allows you to ignore existing errors and only report new ones,
 following the Boy Scout Rule: "Leave it better than you found it."`,
