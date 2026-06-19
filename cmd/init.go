@@ -32,7 +32,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Baseline created with %d entries\n", n)
+	if _, err := fmt.Fprintf(os.Stderr, "Baseline created with %d entries\n", n); err != nil {
+		return fmt.Errorf("writing to stderr: %w", err)
+	}
 	return nil
 }
 
@@ -99,7 +101,12 @@ func defaultInitConfigPrompt(promptOut io.Writer) (*baseline.Config, bool, error
 	if err != nil {
 		return nil, false, nil
 	}
-	defer tty.Close()
+
+	defer func() {
+		if err := tty.Close(); err != nil {
+			_, _ = fmt.Fprintf(promptOut, "warning: closing tty: %v\n", err)
+		}
+	}()
 
 	return promptInitConfigFrom(tty, promptOut)
 }
@@ -141,7 +148,11 @@ func promptYesNo(reader *bufio.Reader, out io.Writer, question string, defaultYe
 	}
 
 	for {
-		fmt.Fprintf(out, "%s [%s]: ", question, defaultLabel)
+		_, err := fmt.Fprintf(out, "%s [%s]: ", question, defaultLabel)
+		if err != nil {
+			return false, fmt.Errorf("writing prompt: %w", err)
+		}
+
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			return false, fmt.Errorf("reading input: %w", err)
@@ -157,14 +168,21 @@ func promptYesNo(reader *bufio.Reader, out io.Writer, question string, defaultYe
 		case "n", "no":
 			return false, nil
 		default:
-			fmt.Fprintln(out, "Please answer y or n.")
+			_, err := fmt.Fprintln(out, "Please answer y or n.")
+			if err != nil {
+				return false, fmt.Errorf("writing prompt: %w", err)
+			}
 		}
 	}
 }
 
 func promptPolicy(reader *bufio.Reader, out io.Writer) (string, error) {
 	for {
-		fmt.Fprint(out, "Policy [file/hunk/off] (default: hunk): ")
+		_, err := fmt.Fprint(out, "Policy [file/hunk/off] (default: hunk): ")
+		if err != nil {
+			return "", fmt.Errorf("writing prompt: %w", err)
+		}
+
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			return "", fmt.Errorf("reading input: %w", err)
@@ -175,11 +193,18 @@ func promptPolicy(reader *bufio.Reader, out io.Writer) (string, error) {
 			return "hunk", nil
 		}
 		if answer == "scope" {
-			fmt.Fprintln(out, "scope is not yet available; choose file, hunk, or off.")
+			_, err := fmt.Fprintln(out, "scope is not yet available; choose file, hunk, or off.")
+			if err != nil {
+				return "", fmt.Errorf("writing prompt: %w", err)
+			}
 			continue
 		}
+
 		if err := validatePolicy(answer); err != nil {
-			fmt.Fprintf(out, "%v\n", err)
+			_, err := fmt.Fprintf(out, "%v\n", err)
+			if err != nil {
+				return "", fmt.Errorf("writing prompt: %w", err)
+			}
 			continue
 		}
 		return answer, nil
@@ -187,7 +212,11 @@ func promptPolicy(reader *bufio.Reader, out io.Writer) (string, error) {
 }
 
 func promptBaseRef(reader *bufio.Reader, out io.Writer) (string, error) {
-	fmt.Fprint(out, "Base ref (default: origin/main): ")
+	_, err := fmt.Fprint(out, "Base ref (default: origin/main): ")
+	if err != nil {
+		return "", fmt.Errorf("writing prompt: %w", err)
+	}
+
 	line, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("reading input: %w", err)
