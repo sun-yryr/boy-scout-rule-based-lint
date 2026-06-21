@@ -21,7 +21,7 @@
       "properties": {
         "boy_scout_policy": {
           "type": "string",
-          "enum": ["off", "file", "hunk", "scope"]
+          "enum": ["off", "file", "hunk"]
         },
         "base_ref": {
           "type": "string",
