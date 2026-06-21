@@ -69,14 +69,12 @@ func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err err
 	}, nil
 }
 
-// computeHash computes a hash of the context lines
-// It normalizes whitespace before hashing
+// computeHash computes a SHA-256 hash of the context lines.
+// Leading and trailing whitespace on each line is trimmed before hashing.
 func computeHash(lines []string) string {
 	var normalized []string
 	for _, line := range lines {
-		// Normalize whitespace: trim and collapse multiple spaces
-		trimmed := strings.TrimSpace(line)
-		normalized = append(normalized, trimmed)
+		normalized = append(normalized, strings.TrimSpace(line))
 	}
 
 	combined := strings.Join(normalized, "\n")

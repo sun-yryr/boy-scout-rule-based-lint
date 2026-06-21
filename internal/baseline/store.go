@@ -1,6 +1,7 @@
 package baseline
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 )
@@ -30,10 +31,13 @@ func (s *Store) Load(path string) (*Baseline, error) {
 
 // Save saves a baseline to a file
 func (s *Store) Save(path string, bl *Baseline) error {
-	data, err := json.MarshalIndent(bl, "", "  ")
-	if err != nil {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(bl); err != nil {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, buf.Bytes(), 0644)
 }

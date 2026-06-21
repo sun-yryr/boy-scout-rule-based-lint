@@ -111,6 +111,27 @@ line 3`
 	}
 }
 
+func TestExtractor_SourceLinePreservesWhitespace(t *testing.T) {
+	content := "  func foo() {  \n"
+
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.go")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	e := NewExtractor()
+	ctx, err := e.Extract(tmpFile, 1)
+	if err != nil {
+		t.Fatalf("Extract() unexpected error: %v", err)
+	}
+
+	want := "  func foo() {  "
+	if ctx.Lines[0] != want {
+		t.Errorf("Lines[0] = %q, want %q (whitespace preserved)", ctx.Lines[0], want)
+	}
+}
+
 func TestExtractor_HashNormalization(t *testing.T) {
 	tmpDir := t.TempDir()
 
