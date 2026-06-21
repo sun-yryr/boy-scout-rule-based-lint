@@ -1,41 +1,97 @@
 package baseline
 
-// Matcher handles matching lint issues against the baseline
-type Matcher struct{}
-
-// NewMatcher creates a new Matcher
-func NewMatcher() *Matcher {
-	return &Matcher{}
+type MatchStrategy interface {
+	GroupKey(e Entry) string
+	Match(base, current Entry) (matched bool, key string)
+	MatchAny(base Entry, candidates []Entry) (matched bool, key string)
 }
 
-// Match checks if an entry matches any entry in the baseline
-// It first matches by file and message, then by context hash
-func (m *Matcher) Match(bl *Baseline, entry Entry) bool {
-	candidates := bl.FindByFileAndMessage(entry.File, entry.Message)
-	if len(candidates) == 0 {
-		return false
-	}
+type SessionMatcher struct {
+	baseline  *Baseline
+	strategy  MatchStrategy
+	remaining map[string]int
+}
 
-	// Check for exact context hash match
-	for _, c := range candidates {
-		if c.ContextHash == entry.ContextHash {
-			return true
+func NewSessionMatcher(bl *Baseline, s MatchStrategy) *SessionMatcher {
+	sm := &SessionMatcher{
+		baseline:  bl,
+		strategy:  s,
+		remaining: make(map[string]int, len(bl.Entries)),
+	}
+	for _, e := range bl.Entries {
+		sm.remaining[s.GroupKey(e)] += e.Count
+	}
+	return sm
+}
+
+func (sm *SessionMatcher) Match(current Entry) bool {
+	for i := range sm.baseline.Entries {
+		base := sm.baseline.Entries[i]
+		matched, key := sm.strategy.Match(base, current)
+		if !matched {
+			continue
 		}
-	}
-
-	// If no exact match and context hash is empty, match by file+message only
-	if entry.ContextHash == "" {
+		if sm.remaining[key] <= 0 {
+			continue
+		}
+		sm.remaining[key]--
 		return true
 	}
+	return false
+}
 
-	// Fallback: if the issue's context couldn't be extracted but
-	// there are baseline entries for the same file+message,
-	// we can optionally be lenient
-	for _, c := range candidates {
-		if c.ContextHash == "" {
-			return true
+type ExactMatcher struct{}
+
+func NewExactMatcher() *ExactMatcher {
+	return &ExactMatcher{}
+}
+
+func (m *ExactMatcher) GroupKey(e Entry) string {
+	return e.File + ":" + e.Fingerprints.LineHash
+}
+
+func (m *ExactMatcher) Match(base, current Entry) (bool, string) {
+	key := m.GroupKey(base)
+	if m.GroupKey(current) == key {
+		return true, key
+	}
+	return false, ""
+}
+
+func (m *ExactMatcher) MatchAny(base Entry, candidates []Entry) (bool, string) {
+	key := m.GroupKey(base)
+	for i := range candidates {
+		if m.GroupKey(candidates[i]) == key {
+			return true, key
 		}
 	}
+	return false, ""
+}
 
-	return false
+type LooseMatcher struct{}
+
+func NewLooseMatcher() *LooseMatcher {
+	return &LooseMatcher{}
+}
+
+func (m *LooseMatcher) GroupKey(e Entry) string {
+	return e.File + ":" + e.Message
+}
+
+func (m *LooseMatcher) Match(base, current Entry) (bool, string) {
+	key := m.GroupKey(base)
+	if m.GroupKey(current) == key {
+		return true, key
+	}
+	return false, ""
+}
+
+func (m *LooseMatcher) MatchAny(base Entry, candidates []Entry) (bool, string) {
+	key := m.GroupKey(base)
+	for i := range candidates {
+		if m.GroupKey(candidates[i]) == key {
+			return true, key
+		}
+	}
+	return false, ""
 }

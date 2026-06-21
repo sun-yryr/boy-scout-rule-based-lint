@@ -7,27 +7,16 @@ import (
 )
 
 func TestNewExtractor(t *testing.T) {
-	e := NewExtractor(3)
+	e := NewExtractor()
 	if e == nil {
 		t.Fatal("NewExtractor() returned nil")
-	}
-	if e.contextLines != 3 {
-		t.Errorf("contextLines = %d, want 3", e.contextLines)
 	}
 }
 
 func TestExtractor_Extract(t *testing.T) {
-	// Create a temporary test file
 	content := `line 1
 line 2
-line 3
-line 4
-line 5
-line 6
-line 7
-line 8
-line 9
-line 10`
+line 3`
 
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "test.go")
@@ -36,55 +25,31 @@ line 10`
 	}
 
 	tests := []struct {
-		name         string
-		contextLines int
-		lineNum      int
-		wantLines    []string
-		wantErr      bool
+		name      string
+		lineNum   int
+		wantLines []string
 	}{
 		{
-			name:         "middle of file with context 2",
-			contextLines: 2,
-			lineNum:      5,
-			wantLines:    []string{"line 3", "line 4", "line 5", "line 6", "line 7"},
+			name:      "first line",
+			lineNum:   1,
+			wantLines: []string{"line 1"},
 		},
 		{
-			name:         "start of file",
-			contextLines: 2,
-			lineNum:      1,
-			wantLines:    []string{"line 1", "line 2", "line 3"},
+			name:      "middle line",
+			lineNum:   2,
+			wantLines: []string{"line 2"},
 		},
 		{
-			name:         "end of file",
-			contextLines: 2,
-			lineNum:      10,
-			wantLines:    []string{"line 8", "line 9", "line 10"},
-		},
-		{
-			name:         "context 0",
-			contextLines: 0,
-			lineNum:      5,
-			wantLines:    []string{"line 5"},
-		},
-		{
-			name:         "large context",
-			contextLines: 20,
-			lineNum:      5,
-			wantLines:    []string{"line 1", "line 2", "line 3", "line 4", "line 5", "line 6", "line 7", "line 8", "line 9", "line 10"},
+			name:      "last line",
+			lineNum:   3,
+			wantLines: []string{"line 3"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewExtractor(tt.contextLines)
+			e := NewExtractor()
 			ctx, err := e.Extract(tmpFile, tt.lineNum)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Error("Extract() expected error, got nil")
-				}
-				return
-			}
 
 			if err != nil {
 				t.Fatalf("Extract() unexpected error: %v", err)
@@ -108,21 +73,71 @@ line 10`
 }
 
 func TestExtractor_Extract_FileNotFound(t *testing.T) {
-	e := NewExtractor(2)
+	e := NewExtractor()
 	_, err := e.Extract("/nonexistent/file.go", 1)
 	if err == nil {
 		t.Error("Extract() expected error for nonexistent file, got nil")
 	}
 }
 
+func TestExtractor_Extract_InvalidLineNum(t *testing.T) {
+	content := `line 1
+line 2
+line 3`
+
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.go")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		lineNum int
+	}{
+		{name: "zero line number", lineNum: 0},
+		{name: "negative line number", lineNum: -1},
+		{name: "line number beyond file", lineNum: 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := NewExtractor()
+			_, err := e.Extract(tmpFile, tt.lineNum)
+			if err == nil {
+				t.Errorf("Extract() lineNum=%d: expected error, got nil", tt.lineNum)
+			}
+		})
+	}
+}
+
+func TestExtractor_SourceLinePreservesWhitespace(t *testing.T) {
+	content := "  func foo() {  \n"
+
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.go")
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	e := NewExtractor()
+	ctx, err := e.Extract(tmpFile, 1)
+	if err != nil {
+		t.Fatalf("Extract() unexpected error: %v", err)
+	}
+
+	want := "  func foo() {  "
+	if ctx.Lines[0] != want {
+		t.Errorf("Lines[0] = %q, want %q (whitespace preserved)", ctx.Lines[0], want)
+	}
+}
+
 func TestExtractor_HashNormalization(t *testing.T) {
-	// Create two files with same content but different whitespace
 	tmpDir := t.TempDir()
 
 	file1 := filepath.Join(tmpDir, "file1.go")
 	file2 := filepath.Join(tmpDir, "file2.go")
 
-	// Same content with different leading/trailing whitespace
 	content1 := "  func foo() {  \n    return\n  }"
 	content2 := "func foo() {\nreturn\n}"
 
@@ -133,7 +148,7 @@ func TestExtractor_HashNormalization(t *testing.T) {
 		t.Fatalf("Failed to create file2: %v", err)
 	}
 
-	e := NewExtractor(0)
+	e := NewExtractor()
 
 	ctx1, err := e.Extract(file1, 2)
 	if err != nil {
@@ -145,7 +160,7 @@ func TestExtractor_HashNormalization(t *testing.T) {
 		t.Fatalf("Extract file2 failed: %v", err)
 	}
 
-	// After normalization (trimming whitespace), the hashes should be the same
+	// After normalization (trimming whitespace), the hashes for the same line should match
 	if ctx1.Hash != ctx2.Hash {
 		t.Errorf("Hashes should match after normalization: %q != %q", ctx1.Hash, ctx2.Hash)
 	}
@@ -164,7 +179,7 @@ func TestExtractor_DifferentContentDifferentHash(t *testing.T) {
 		t.Fatalf("Failed to create file2: %v", err)
 	}
 
-	e := NewExtractor(0)
+	e := NewExtractor()
 
 	ctx1, _ := e.Extract(file1, 1)
 	ctx2, _ := e.Extract(file2, 1)

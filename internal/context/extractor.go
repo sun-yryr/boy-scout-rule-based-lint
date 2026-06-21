@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -15,42 +16,40 @@ type Context struct {
 }
 
 // Extractor extracts code context from source files
-type Extractor struct {
-	contextLines int
-}
+type Extractor struct{}
 
 // NewExtractor creates a new Extractor
-func NewExtractor(contextLines int) *Extractor {
-	return &Extractor{
-		contextLines: contextLines,
-	}
+func NewExtractor() *Extractor {
+	return &Extractor{}
 }
 
 // Extract extracts the context around a specific line in a file
-func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
-	// Calculate start and end indices (1-indexed)
-	startIdx := lineNum - e.contextLines
-	endIdx := lineNum + e.contextLines
-
-	if startIdx < 1 {
-		startIdx = 1
+func (e *Extractor) Extract(filePath string, lineNum int) (ctx *Context, err error) {
+	if lineNum <= 0 {
+		return nil, fmt.Errorf("invalid line number %d: must be positive", lineNum)
 	}
 
-	// Extract context lines
 	var contextLines []string
 
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	currentLine := 0
+	found := false
 	for scanner.Scan() {
 		currentLine++
-		if startIdx <= currentLine && currentLine <= endIdx {
+		if currentLine == lineNum {
 			contextLines = append(contextLines, scanner.Text())
+			found = true
+			break
 		}
 	}
 
@@ -58,7 +57,10 @@ func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
 		return nil, err
 	}
 
-	// Compute hash
+	if !found {
+		return nil, fmt.Errorf("line %d not found in %s", lineNum, filePath)
+	}
+
 	hash := computeHash(contextLines)
 
 	return &Context{
@@ -67,14 +69,12 @@ func (e *Extractor) Extract(filePath string, lineNum int) (*Context, error) {
 	}, nil
 }
 
-// computeHash computes a hash of the context lines
-// It normalizes whitespace before hashing
+// computeHash computes a SHA-256 hash of the context lines.
+// Leading and trailing whitespace on each line is trimmed before hashing.
 func computeHash(lines []string) string {
 	var normalized []string
 	for _, line := range lines {
-		// Normalize whitespace: trim and collapse multiple spaces
-		trimmed := strings.TrimSpace(line)
-		normalized = append(normalized, trimmed)
+		normalized = append(normalized, strings.TrimSpace(line))
 	}
 
 	combined := strings.Join(normalized, "\n")

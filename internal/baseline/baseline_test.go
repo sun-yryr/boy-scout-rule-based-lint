@@ -7,8 +7,11 @@ import (
 func TestNew(t *testing.T) {
 	bl := New()
 
-	if bl.Version != 1 {
-		t.Errorf("Version = %d, want 1", bl.Version)
+	if bl.Version != 2 {
+		t.Errorf("Version = %d, want 2", bl.Version)
+	}
+	if bl.Schema != SchemaV2URL {
+		t.Errorf("Schema = %q, want %q", bl.Schema, SchemaV2URL)
 	}
 	if bl.Len() != 0 {
 		t.Errorf("Len() = %d, want 0", bl.Len())
@@ -17,64 +20,41 @@ func TestNew(t *testing.T) {
 
 func TestBaseline_Add(t *testing.T) {
 	tests := []struct {
-		name         string
-		entries      []Entry
-		wantLen      int
-		wantCountFor map[string]int // file+message -> expected count
+		name    string
+		entries []Entry
+		wantLen int
 	}{
 		{
 			name: "single entry",
 			entries: []Entry{
-				{File: "main.go", Message: "error1", ContextHash: "hash1", Count: 1},
+				{File: "main.go", Message: "error1", Count: 1},
 			},
-			wantLen:      1,
-			wantCountFor: map[string]int{"main.go:error1:hash1": 1},
+			wantLen: 1,
 		},
 		{
-			name: "duplicate entry increments count",
+			name: "duplicate entry does not deduplicate",
 			entries: []Entry{
-				{File: "main.go", Message: "error1", ContextHash: "hash1", Count: 1},
-				{File: "main.go", Message: "error1", ContextHash: "hash1", Count: 1},
-				{File: "main.go", Message: "error1", ContextHash: "hash1", Count: 1},
+				{File: "main.go", Message: "error1", Count: 1},
+				{File: "main.go", Message: "error1", Count: 1},
+				{File: "main.go", Message: "error1", Count: 1},
 			},
-			wantLen:      1,
-			wantCountFor: map[string]int{"main.go:error1:hash1": 3},
+			wantLen: 3,
 		},
 		{
 			name: "different files",
 			entries: []Entry{
-				{File: "a.go", Message: "error", ContextHash: "h1", Count: 1},
-				{File: "b.go", Message: "error", ContextHash: "h2", Count: 1},
+				{File: "a.go", Message: "error", Count: 1},
+				{File: "b.go", Message: "error", Count: 1},
 			},
 			wantLen: 2,
-			wantCountFor: map[string]int{
-				"a.go:error:h1": 1,
-				"b.go:error:h2": 1,
-			},
 		},
 		{
 			name: "same file different messages",
 			entries: []Entry{
-				{File: "main.go", Message: "error1", ContextHash: "h1", Count: 1},
-				{File: "main.go", Message: "error2", ContextHash: "h2", Count: 1},
+				{File: "main.go", Message: "error1", Count: 1},
+				{File: "main.go", Message: "error2", Count: 1},
 			},
 			wantLen: 2,
-			wantCountFor: map[string]int{
-				"main.go:error1:h1": 1,
-				"main.go:error2:h2": 1,
-			},
-		},
-		{
-			name: "same file and message different hash",
-			entries: []Entry{
-				{File: "main.go", Message: "error", ContextHash: "hash1", Count: 1},
-				{File: "main.go", Message: "error", ContextHash: "hash2", Count: 1},
-			},
-			wantLen: 2,
-			wantCountFor: map[string]int{
-				"main.go:error:hash1": 1,
-				"main.go:error:hash2": 1,
-			},
 		},
 	}
 
@@ -89,33 +69,16 @@ func TestBaseline_Add(t *testing.T) {
 			if bl.Len() != tt.wantLen {
 				t.Errorf("Len() = %d, want %d", bl.Len(), tt.wantLen)
 			}
-
-			for key, wantCount := range tt.wantCountFor {
-				found := false
-				for _, e := range bl.Entries {
-					entryKey := e.File + ":" + e.Message + ":" + e.ContextHash
-					if entryKey == key {
-						if e.Count != wantCount {
-							t.Errorf("Count for %q = %d, want %d", key, e.Count, wantCount)
-						}
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("Entry %q not found", key)
-				}
-			}
 		})
 	}
 }
 
 func TestBaseline_FindByFileAndMessage(t *testing.T) {
 	bl := New()
-	bl.Add(Entry{File: "main.go", Message: "error1", ContextHash: "h1", Count: 1})
-	bl.Add(Entry{File: "main.go", Message: "error1", ContextHash: "h2", Count: 1})
-	bl.Add(Entry{File: "main.go", Message: "error2", ContextHash: "h3", Count: 1})
-	bl.Add(Entry{File: "other.go", Message: "error1", ContextHash: "h4", Count: 1})
+	bl.Add(Entry{File: "main.go", Message: "error1", Count: 1})
+	bl.Add(Entry{File: "main.go", Message: "error1", Count: 1})
+	bl.Add(Entry{File: "main.go", Message: "error2", Count: 1})
+	bl.Add(Entry{File: "other.go", Message: "error1", Count: 1})
 
 	tests := []struct {
 		name        string
@@ -172,19 +135,18 @@ func TestBaseline_Len(t *testing.T) {
 		t.Errorf("Len() on empty baseline = %d, want 0", bl.Len())
 	}
 
-	bl.Add(Entry{File: "a.go", Message: "msg", ContextHash: "h1", Count: 1})
+	bl.Add(Entry{File: "a.go", Message: "msg", Count: 1})
 	if bl.Len() != 1 {
 		t.Errorf("Len() after 1 add = %d, want 1", bl.Len())
 	}
 
-	bl.Add(Entry{File: "b.go", Message: "msg", ContextHash: "h2", Count: 1})
+	bl.Add(Entry{File: "b.go", Message: "msg", Count: 1})
 	if bl.Len() != 2 {
 		t.Errorf("Len() after 2 adds = %d, want 2", bl.Len())
 	}
 
-	// Adding duplicate should not increase length
-	bl.Add(Entry{File: "a.go", Message: "msg", ContextHash: "h1", Count: 1})
-	if bl.Len() != 2 {
-		t.Errorf("Len() after duplicate add = %d, want 2", bl.Len())
+	bl.Add(Entry{File: "a.go", Message: "msg", Count: 1})
+	if bl.Len() != 3 {
+		t.Errorf("Len() after 3 adds = %d, want 3", bl.Len())
 	}
 }
