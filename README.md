@@ -149,7 +149,7 @@ Each baseline entry records how many times the error occurred (`count`). A singl
 
 ### Boy Scout Policy implementation
 
-bsr runs `git diff --unified=0 <base-ref>...HEAD` to compute changed files and line ranges, then selectively disables baseline suppression in those regions according to the chosen policy.
+bsr runs `git diff --unified=0 <base-ref>...HEAD` and `git diff --cached --unified=0`, merges the results, then selectively disables baseline suppression in those regions according to the chosen policy. This covers both committed branch changes and staged (index) changes.
 
 ## Options
 

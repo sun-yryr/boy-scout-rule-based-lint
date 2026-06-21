@@ -276,6 +276,69 @@ rename to new.go
 	}
 }
 
+func TestMergeChangeSets_Union(t *testing.T) {
+	branch := mustParseDiff(t, `diff --git a/foo.go b/foo.go
+--- a/foo.go
++++ b/foo.go
+@@ -1 +1,2 @@
++branch line
+`)
+	staged := mustParseDiff(t, `diff --git a/bar.go b/bar.go
+--- a/bar.go
++++ b/bar.go
+@@ -1 +1,2 @@
++staged line
+`)
+
+	merged := MergeChangeSets(branch, staged)
+
+	if !merged.Files["foo.go"] {
+		t.Error("expected foo.go from branch diff")
+	}
+	if !merged.Files["bar.go"] {
+		t.Error("expected bar.go from staged diff")
+	}
+	if !merged.ChangedLines["foo.go"][1] {
+		t.Error("expected changed line in foo.go")
+	}
+	if !merged.ChangedLines["bar.go"][1] {
+		t.Error("expected changed line in bar.go")
+	}
+}
+
+func TestMergeChangeSets_OverlappingLines(t *testing.T) {
+	a := mustParseDiff(t, `diff --git a/foo.go b/foo.go
+--- a/foo.go
++++ b/foo.go
+@@ -5 +5,2 @@
++line 5
+`)
+	b := mustParseDiff(t, `diff --git a/foo.go b/foo.go
+--- a/foo.go
++++ b/foo.go
+@@ -5 +5,2 @@
++line 5 again
+`)
+
+	merged := MergeChangeSets(a, b)
+	if len(merged.ChangedLines["foo.go"]) != 1 {
+		t.Errorf("expected 1 changed line, got %d", len(merged.ChangedLines["foo.go"]))
+	}
+	if !merged.ChangedLines["foo.go"][5] {
+		t.Error("expected line 5 to be changed")
+	}
+}
+
+func mustParseDiff(t *testing.T, diffText string) *ChangeSet {
+	t.Helper()
+
+	cs, err := ParseDiff(strings.NewReader(diffText))
+	if err != nil {
+		t.Fatalf("ParseDiff(): %v", err)
+	}
+	return cs
+}
+
 func TestParseDiff_OnlyDeletions(t *testing.T) {
 	diff := `diff --git a/foo.go b/foo.go
 --- a/foo.go

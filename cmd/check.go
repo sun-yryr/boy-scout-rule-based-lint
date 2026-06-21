@@ -64,7 +64,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		if resolvedBaseRef == "" {
 			return fmt.Errorf("base-ref is required when boy-scout-policy is not 'off'")
 		}
-		changeSet, err = diff.GetDiff(resolvedBaseRef)
+		changeSet, err = diff.GetChangeSet(resolvedBaseRef)
 		if err != nil {
 			return fmt.Errorf("computing diff against %s: %w", resolvedBaseRef, err)
 		}

@@ -140,13 +140,75 @@ func isDiffHeader(line string) bool {
 }
 
 func GetDiff(baseRef string) (*ChangeSet, error) {
-	cmd := exec.Command("git", "diff", "--unified=0", baseRef+"...HEAD")
+	return runGitDiff("git", "diff", "--unified=0", baseRef+"...HEAD")
+}
+
+func GetCachedDiff() (*ChangeSet, error) {
+	return runGitDiff("git", "diff", "--cached", "--unified=0")
+}
+
+func GetChangeSet(baseRef string) (*ChangeSet, error) {
+	branch, err := GetDiff(baseRef)
+	if err != nil {
+		return nil, err
+	}
+	staged, err := GetCachedDiff()
+	if err != nil {
+		return nil, err
+	}
+	return MergeChangeSets(branch, staged), nil
+}
+
+func MergeChangeSets(a, b *ChangeSet) *ChangeSet {
+	if a == nil && b == nil {
+		return &ChangeSet{
+			Files:        make(map[string]bool),
+			ChangedLines: make(map[string]map[int]bool),
+		}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+
+	merged := &ChangeSet{
+		Files:        make(map[string]bool, len(a.Files)+len(b.Files)),
+		ChangedLines: make(map[string]map[int]bool, len(a.ChangedLines)+len(b.ChangedLines)),
+	}
+
+	for path := range a.Files {
+		merged.Files[path] = true
+	}
+	for path := range b.Files {
+		merged.Files[path] = true
+	}
+
+	mergeLines := func(src map[string]map[int]bool) {
+		for path, lines := range src {
+			if merged.ChangedLines[path] == nil {
+				merged.ChangedLines[path] = make(map[int]bool, len(lines))
+			}
+			for line := range lines {
+				merged.ChangedLines[path][line] = true
+			}
+		}
+	}
+	mergeLines(a.ChangedLines)
+	mergeLines(b.ChangedLines)
+
+	return merged
+}
+
+func runGitDiff(args ...string) (*ChangeSet, error) {
+	cmd := exec.Command(args[0], args[1:]...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("creating pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("running git diff: %w", err)
+		return nil, fmt.Errorf("running %s: %w", args[0], err)
 	}
 	cs, err := ParseDiff(stdout)
 	if err != nil {
