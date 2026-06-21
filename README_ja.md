@@ -50,6 +50,8 @@ golangci-lint run ./... | bsr init
 
 現在のlint違反をすべて記録した `.bsr-baseline.json` が生成されます。これをリポジトリにコミットしてください。
 
+ベースライン形式は [baseline v2 JSON Schema](https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json) で定義されています。新規生成時は `$schema` フィールドにこの URL が含まれます。
+
 対話可能な端末で実行した場合、`bsr init` は Boy Scout Policy の設定を質問し、baseline の `config` に保存します。非対話環境（stdin がパイプの場合など）では質問をスキップし、`config` は書き込みません。
 
 ### 2. 新規違反の検出

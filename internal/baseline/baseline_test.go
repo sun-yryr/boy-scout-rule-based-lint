@@ -10,6 +10,9 @@ func TestNew(t *testing.T) {
 	if bl.Version != 2 {
 		t.Errorf("Version = %d, want 2", bl.Version)
 	}
+	if bl.Schema != SchemaV2URL {
+		t.Errorf("Schema = %q, want %q", bl.Schema, SchemaV2URL)
+	}
 	if bl.Len() != 0 {
 		t.Errorf("Len() = %d, want 0", bl.Len())
 	}

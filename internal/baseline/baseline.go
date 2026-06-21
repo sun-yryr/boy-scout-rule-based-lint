@@ -1,5 +1,8 @@
 package baseline
 
+// SchemaV2URL is the published JSON Schema for baseline version 2.
+const SchemaV2URL = "https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json"
+
 type Fingerprints struct {
 	LineHash string `json:"line_hash"`
 }
@@ -21,6 +24,7 @@ type Entry struct {
 
 // Baseline represents a collection of baseline entries
 type Baseline struct {
+	Schema  string  `json:"$schema,omitempty"`
 	Version int     `json:"version"`
 	Config  *Config `json:"config,omitempty"`
 	Entries []Entry `json:"entries"`
@@ -29,6 +33,7 @@ type Baseline struct {
 // New creates a new empty Baseline
 func New() *Baseline {
 	return &Baseline{
+		Schema:  SchemaV2URL,
 		Version: 2,
 		Entries: []Entry{},
 	}

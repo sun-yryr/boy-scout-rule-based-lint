@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json",
+  "title": "bsr baseline v2",
+  "description": "Baseline file format for boy-scout-rule-based-lint (bsr)",
+  "type": "object",
+  "required": ["version", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "version": {
+      "type": "integer",
+      "const": 2
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "boy_scout_policy": {
+          "type": "string",
+          "enum": ["off", "file", "hunk", "scope"]
+        },
+        "base_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["file", "message", "source_line", "count", "fingerprints"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path relative to the git repository root, using forward slashes"
+        },
+        "message": {
+          "type": "string"
+        },
+        "source_line": {
+          "type": "string",
+          "description": "Raw source line at the reported location (whitespace preserved)"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fingerprints": {
+          "type": "object",
+          "required": ["line_hash"],
+          "additionalProperties": false,
+          "properties": {
+            "line_hash": {
+              "type": "string",
+              "description": "SHA-256 hex digest of the source line with leading and trailing whitespace trimmed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
