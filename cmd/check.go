@@ -12,6 +12,7 @@ import (
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/context"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/diff"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/parser"
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/pathnorm"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/reporter"
 )
 
@@ -126,22 +127,32 @@ func (c *lintChecker) handleLine(line string) (stop bool, err error) {
 		return c.reporter.Report(line)
 	}
 
+	normalized, err := pathnorm.Normalize(issue.File)
+	if err != nil {
+		return false, fmt.Errorf("normalizing path %q: %w", issue.File, err)
+	}
+
 	if c.changeSet != nil {
 		switch c.policy {
 		case "file":
-			if c.changeSet.HasFile(issue.File) {
+			if c.changeSet.HasFile(normalized) {
 				return c.reporter.Report(line)
 			}
 		case "hunk":
-			if c.changeSet.HasLine(issue.File, issue.Line) {
+			if c.changeSet.HasLine(normalized, issue.Line) {
 				return c.reporter.Report(line)
 			}
 		}
 	}
 
-	ctx, err := c.extractor.Extract(issue.File, issue.Line)
+	resolved, err := pathnorm.Resolve(normalized)
 	if err != nil {
-		return false, fmt.Errorf("extracting context for %s:%d: %w", issue.File, issue.Line, err)
+		return false, fmt.Errorf("resolving path %q: %w", normalized, err)
+	}
+
+	ctx, err := c.extractor.Extract(resolved, issue.Line)
+	if err != nil {
+		return false, fmt.Errorf("extracting context for %s:%d: %w", normalized, issue.Line, err)
 	}
 
 	sourceLine := ""
@@ -150,7 +161,7 @@ func (c *lintChecker) handleLine(line string) (stop bool, err error) {
 	}
 
 	entry := baseline.Entry{
-		File:       issue.File,
+		File:       normalized,
 		Message:    issue.Message,
 		SourceLine: sourceLine,
 		Count:      1,

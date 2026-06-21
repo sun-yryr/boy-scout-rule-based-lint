@@ -11,6 +11,7 @@ import (
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/baseline"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/context"
 	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/parser"
+	"github.com/sun-yryr/boy-scout-rule-based-lint/internal/pathnorm"
 )
 
 var initCmd = &cobra.Command{
@@ -54,9 +55,18 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 			continue
 		}
 
-		ctx, err := extractor.Extract(issue.File, issue.Line)
+		normalized, err := pathnorm.Normalize(issue.File)
 		if err != nil {
-			return 0, fmt.Errorf("extracting context for %s:%d: %w", issue.File, issue.Line, err)
+			return 0, fmt.Errorf("normalizing path %q: %w", issue.File, err)
+		}
+		resolved, err := pathnorm.Resolve(normalized)
+		if err != nil {
+			return 0, fmt.Errorf("resolving path %q: %w", normalized, err)
+		}
+
+		ctx, err := extractor.Extract(resolved, issue.Line)
+		if err != nil {
+			return 0, fmt.Errorf("extracting context for %s:%d: %w", normalized, issue.Line, err)
 		}
 
 		sourceLine := ""
@@ -65,7 +75,7 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 		}
 
 		entry := baseline.Entry{
-			File:       issue.File,
+			File:       normalized,
 			Message:    issue.Message,
 			SourceLine: sourceLine,
 			Count:      1,
