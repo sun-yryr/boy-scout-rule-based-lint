@@ -44,7 +44,7 @@ go build -o bsr .
 ### 1. Initialize the baseline
 
 ```bash
-golangci-lint run ./... | bsr init
+<lint-command> | bsr init
 ```
 
 This generates `.bsr-baseline.json` with every current lint violation. Commit it to your repository.
@@ -56,7 +56,7 @@ When run from an interactive terminal, `bsr init` prompts for optional Boy Scout
 ### 2. Detect new violations
 
 ```bash
-golangci-lint run ./... | bsr check
+<lint-command> | bsr check
 ```
 
 - Only violations not present in the baseline are printed
@@ -84,20 +84,20 @@ CLI flags override baseline config when specified:
 
 ```bash
 # Uses config from .bsr-baseline.json
-golangci-lint run ./... | bsr check
+<lint-command> | bsr check
 
 # Temporarily override the stored policy
-golangci-lint run ./... | bsr check --boy-scout-policy file
+<lint-command> | bsr check --boy-scout-policy file
 ```
 
 You can also pass everything on the command line:
 
 ```bash
 # All errors in changed files are reported, regardless of the baseline
-golangci-lint run ./... | bsr check --boy-scout-policy file --base-ref origin/main
+<lint-command> | bsr check --boy-scout-policy file --base-ref origin/main
 
 # Only errors on changed lines (inside hunks) are reported
-golangci-lint run ./... | bsr check --boy-scout-policy hunk --base-ref origin/main
+<lint-command> | bsr check --boy-scout-policy hunk --base-ref origin/main
 ```
 
 | Policy | Behavior | When to use |
@@ -190,8 +190,13 @@ Unparseable lines are passed through to stdout unchanged (summary lines, etc.).
 ### golangci-lint
 
 ```bash
-golangci-lint run ./... | bsr init
-golangci-lint run ./... | bsr check
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr init
+
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr check
 ```
 
 ### ESLint
@@ -229,7 +234,7 @@ buf lint | bsr check
 ```yaml
 - name: Lint with baseline
   run: |
-    golangci-lint run ./... | bsr check
+    <lint-command> | bsr check
 ```
 
 ### With Boy Scout Policy enabled
@@ -242,7 +247,7 @@ buf lint | bsr check
 
 - name: Run linter with Boy Scout policy
   run: |
-    golangci-lint run ./... | bsr check \
+    <lint-command> | bsr check \
       --boy-scout-policy hunk \
       --base-ref origin/main
 ```

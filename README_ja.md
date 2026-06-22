@@ -45,7 +45,7 @@ go build -o bsr .
 ### 1. ベースラインの初期化
 
 ```bash
-golangci-lint run ./... | bsr init
+<lint-command> | bsr init
 ```
 
 現在のlint違反をすべて記録した `.bsr-baseline.json` が生成されます。これをリポジトリにコミットしてください。
@@ -57,7 +57,7 @@ golangci-lint run ./... | bsr init
 ### 2. 新規違反の検出
 
 ```bash
-golangci-lint run ./... | bsr check
+<lint-command> | bsr check
 ```
 
 - ベースラインに存在しない違反のみが出力されます
@@ -85,20 +85,20 @@ CLI フラグは明示的に指定した場合、baseline の `config` より優
 
 ```bash
 # .bsr-baseline.json の config を使う
-golangci-lint run ./... | bsr check
+<lint-command> | bsr check
 
 # 一時的にポリシーを上書き
-golangci-lint run ./... | bsr check --boy-scout-policy file
+<lint-command> | bsr check --boy-scout-policy file
 ```
 
 すべてをコマンドラインで指定することもできます。
 
 ```bash
 # 変更したファイル内のエラーは、ベースラインに関係なくすべて報告
-golangci-lint run ./... | bsr check --boy-scout-policy file --base-ref origin/main
+<lint-command> | bsr check --boy-scout-policy file --base-ref origin/main
 
 # 変更した行（hunk内）のエラーのみ報告
-golangci-lint run ./... | bsr check --boy-scout-policy hunk --base-ref origin/main
+<lint-command> | bsr check --boy-scout-policy hunk --base-ref origin/main
 ```
 
 | ポリシー | 動作 | 想定ユースケース |
@@ -191,8 +191,13 @@ bsrは以下のlint出力形式に対応しています。
 ### golangci-lint
 
 ```bash
-golangci-lint run ./... | bsr init
-golangci-lint run ./... | bsr check
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr init
+
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr check
 ```
 
 ### ESLint
@@ -230,7 +235,7 @@ buf lint | bsr check
 ```yaml
 - name: Lint with baseline
   run: |
-    golangci-lint run ./... | bsr check
+    <lint-command> | bsr check
 ```
 
 ### Boy Scout Policy を有効にする場合
@@ -243,7 +248,7 @@ buf lint | bsr check
 
 - name: Run linter with Boy Scout policy
   run: |
-    golangci-lint run ./... | bsr check \
+    <lint-command> | bsr check \
       --boy-scout-policy hunk \
       --base-ref origin/main
 ```
