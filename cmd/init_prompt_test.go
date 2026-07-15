@@ -191,6 +191,44 @@ func TestInitBaseline_DeclinesOverwrite(t *testing.T) {
 	}
 }
 
+func TestInitBaseline_OverwritesInvalidBaselineWithoutInheritance(t *testing.T) {
+	workDir := t.TempDir()
+	writeTestFile(t, workDir, "main.go", "package main\n")
+	chdirTo(t, workDir)
+
+	baselinePath := filepath.Join(workDir, "baseline.json")
+	if err := os.WriteFile(baselinePath, []byte("invalid"), 0o644); err != nil {
+		t.Fatalf("WriteFile(baseline): %v", err)
+	}
+
+	origExistingPrompt := initExistingBaselinePrompt
+	origConfigPrompt := initConfigPrompt
+	initExistingBaselinePrompt = func(string, io.Writer) (bool, bool, error) {
+		return true, false, nil
+	}
+	initConfigPrompt = func(io.Writer) (*baseline.Config, bool, error) {
+		return nil, false, nil
+	}
+	t.Cleanup(func() {
+		initExistingBaselinePrompt = origExistingPrompt
+		initConfigPrompt = origConfigPrompt
+	})
+
+	_, err := initBaseline(
+		strings.NewReader("main.go:1:1: package main has no comments"),
+		baselinePath,
+		io.Discard,
+	)
+	if err != nil {
+		t.Fatalf("initBaseline() err = %v", err)
+	}
+
+	bl := loadBaseline(t, baselinePath)
+	if bl.Len() != 1 {
+		t.Fatalf("baseline entries = %d, want 1", bl.Len())
+	}
+}
+
 func TestInitBaseline_InheritsExistingConfig(t *testing.T) {
 	workDir := t.TempDir()
 	writeTestFile(t, workDir, "main.go", "package main\n")

@@ -56,7 +56,7 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 
 	bl := baseline.New()
 	promptForConfig := true
-	existing, err := store.Load(baselinePath)
+	_, err := os.Stat(baselinePath)
 	switch {
 	case err == nil:
 		overwrite, inherit, promptErr := initExistingBaselinePrompt(baselinePath, promptOut)
@@ -67,11 +67,15 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 			return 0, errInitCanceled
 		}
 		if inherit {
+			existing, loadErr := store.Load(baselinePath)
+			if loadErr != nil {
+				return 0, fmt.Errorf("loading existing baseline settings: %w", loadErr)
+			}
 			bl.Config = existing.Config
 			promptForConfig = false
 		}
 	case !errors.Is(err, os.ErrNotExist):
-		return 0, fmt.Errorf("loading existing baseline: %w", err)
+		return 0, fmt.Errorf("checking existing baseline: %w", err)
 	}
 
 	scanner := bufio.NewScanner(stdin)
