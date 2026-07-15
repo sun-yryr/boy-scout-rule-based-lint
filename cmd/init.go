@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,6 +31,13 @@ func init() {
 
 func runInit(cmd *cobra.Command, args []string) error {
 	n, err := initBaseline(os.Stdin, baselineFile, os.Stderr)
+	if errors.Is(err, errInitCanceled) {
+		_, writeErr := fmt.Fprintln(os.Stderr, "Baseline was not overwritten")
+		if writeErr != nil {
+			return fmt.Errorf("writing to stderr: %w", writeErr)
+		}
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -39,12 +47,32 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+var errInitCanceled = errors.New("baseline initialization canceled")
+
 func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (int, error) {
 	p := parser.NewLineParser()
 	extractor := context.NewExtractor()
 	store := baseline.NewStore()
 
 	bl := baseline.New()
+	promptForConfig := true
+	existing, err := store.Load(baselinePath)
+	switch {
+	case err == nil:
+		overwrite, inherit, promptErr := initExistingBaselinePrompt(baselinePath, promptOut)
+		if promptErr != nil {
+			return 0, promptErr
+		}
+		if !overwrite {
+			return 0, errInitCanceled
+		}
+		if inherit {
+			bl.Config = existing.Config
+			promptForConfig = false
+		}
+	case !errors.Is(err, os.ErrNotExist):
+		return 0, fmt.Errorf("loading existing baseline: %w", err)
+	}
 
 	scanner := bufio.NewScanner(stdin)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -91,10 +119,12 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 		return 0, fmt.Errorf("reading input: %w", err)
 	}
 
-	if cfg, ok, err := initConfigPrompt(promptOut); err != nil {
-		return 0, err
-	} else if ok {
-		bl.Config = cfg
+	if promptForConfig {
+		if cfg, ok, err := initConfigPrompt(promptOut); err != nil {
+			return 0, err
+		} else if ok {
+			bl.Config = cfg
+		}
 	}
 
 	if err := store.Save(baselinePath, bl); err != nil {
@@ -104,7 +134,50 @@ func initBaseline(stdin io.Reader, baselinePath string, promptOut io.Writer) (in
 	return bl.Len(), nil
 }
 
+var initExistingBaselinePrompt = defaultInitExistingBaselinePrompt
 var initConfigPrompt = defaultInitConfigPrompt
+
+func defaultInitExistingBaselinePrompt(baselinePath string, promptOut io.Writer) (bool, bool, error) {
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		return false, false, nil
+	}
+
+	defer func() {
+		if err := tty.Close(); err != nil {
+			_, _ = fmt.Fprintf(promptOut, "warning: closing tty: %v\n", err)
+		}
+	}()
+
+	return promptExistingBaselineFrom(tty, promptOut, baselinePath)
+}
+
+func promptExistingBaselineFrom(
+	reader io.Reader,
+	promptOut io.Writer,
+	baselinePath string,
+) (bool, bool, error) {
+	bufReader := bufio.NewReader(reader)
+
+	overwrite, err := promptYesNo(
+		bufReader,
+		promptOut,
+		fmt.Sprintf("Baseline %q already exists. Overwrite it?", baselinePath),
+		false,
+	)
+	if err != nil {
+		return false, false, err
+	}
+	if !overwrite {
+		return false, false, nil
+	}
+
+	inherit, err := promptYesNo(bufReader, promptOut, "Inherit existing settings?", true)
+	if err != nil {
+		return false, false, err
+	}
+	return true, inherit, nil
+}
 
 func defaultInitConfigPrompt(promptOut io.Writer) (*baseline.Config, bool, error) {
 	tty, err := os.Open("/dev/tty")

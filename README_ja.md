@@ -54,6 +54,8 @@ go build -o bsr .
 
 対話可能な端末で実行した場合、`bsr init` は Boy Scout Policy の設定を質問し、baseline の `config` に保存します。非対話環境（stdin がパイプの場合など）では質問をスキップし、`config` は書き込みません。
 
+baseline ファイルがすでに存在する場合、`bsr init` は上書きするかを確認します。上書きを承認すると、既存の `config` を引き継ぐかも確認し、引き継がない場合は通常の Boy Scout Policy 設定へ進みます。対話可能な端末がない場合、既存の baseline は上書きされません。
+
 ### 2. 新規違反の検出
 
 ```bash
