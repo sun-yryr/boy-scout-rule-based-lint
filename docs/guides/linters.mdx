@@ -1,0 +1,70 @@
+---
+title: Supported linters
+description: Examples for golangci-lint, ESLint, buf, and similar tools.
+sidebar:
+  icon: wrench
+---
+
+bsr works with tools that print file and line locations.
+
+On `bsr check`, lines that do not match a known format are treated as **new issues** (printed and counted toward exit code `1`). That fail-safe keeps unknown output from being dropped. Configure each linter so stdout is mostly issue lines — hide snippets, progress, and stats when the tool allows it.
+
+## golangci-lint
+
+These flags matter: without them, golangci-lint prints the source line under each issue and a stats footer. Those lines do not match a lint format, so `bsr check` reports them as new and can exit `1` even when every real issue is already in the baseline.
+
+```bash
+golangci-lint run ./... | bsr init
+
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr check
+```
+
+## ESLint
+
+### Default output (stylish)
+
+```bash
+eslint . | bsr init
+eslint . | bsr check
+```
+
+### Unix format
+
+Built into ESLint 8 and earlier. Pass `-f unix`:
+
+<Tabs>
+  <Tab title="ESLint 8">
+
+```bash
+eslint -f unix . | bsr check
+```
+
+  </Tab>
+  <Tab title="ESLint 9+">
+
+```bash
+# Not bundled in ESLint 9+ — install first
+npm install -D eslint-formatter-unix
+eslint -f unix . | bsr check
+```
+
+  </Tab>
+</Tabs>
+
+## Buf
+
+```bash
+buf lint | bsr check
+```
+
+## Output formats
+
+See the full list in [Supported formats](/reference/formats).
+
+## Looking for more examples
+
+This page only lists a few common tools. If you use another linter with bsr, please share the command and a short sample of its output — especially any flags needed so stdout is mostly issue lines.
+
+[Suggest a linter](https://github.com/sun-yryr/boy-scout-rule-based-lint/issues/new?template=linter-example.yml)

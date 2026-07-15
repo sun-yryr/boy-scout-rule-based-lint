@@ -1,0 +1,59 @@
+---
+title: Managing the baseline
+description: How to update .bsr-baseline.json.
+sidebar:
+  icon: folder-cog
+---
+
+`.bsr-baseline.json` lists old lint errors that you allow for now. Commit it. Try to make it smaller over time. Avoid adding new entries without a clear reason.
+
+## Making the file smaller
+
+Each entry is an old error that bsr still hides. A smaller file means fewer such entries.
+
+You can get fewer entries by:
+
+- Fixing the code, then creating the baseline again
+- Creating the baseline again after a large cleanup
+
+Fixing code by itself does **not** change the baseline file. Old entries stay until you create the file again. That is usually fine — `bsr check` only looks at current lint output. But a very large baseline is harder to review in PRs.
+
+:::note
+A future `prune` command may remove unused entries automatically. Until then, run `bsr init` again when you want the file to match the current lint results.
+:::
+
+## Create the baseline again with `bsr init`
+
+`bsr init` **replaces** the whole baseline with the errors the linter reports now:
+
+```bash
+<lint-command> | bsr init
+```
+
+Do this when:
+
+- You fixed many errors and want those entries removed from the file
+- You want a fresh snapshot after a large cleanup
+
+Do **not** do this just to hide new errors. If the linter reports errors that were never in the baseline, `init` will add them as allowed.
+
+:::warning
+In every PR, review the diff for `.bsr-baseline.json`. If the file grew, someone may be allowing new errors — ask why. Also check `config` changes and whether a full rewrite with `init` was intentional.
+:::
+
+## Fix errors without rewriting the file every time
+
+You do not need to run `init` after every fix:
+
+1. Fix the error (or change the line so its content hash no longer matches)
+2. If the error is fixed, it disappears from lint output
+3. If you only changed the line and the error remains, `bsr check` may treat it as new
+4. Later, run `init` again if you want the committed file to stay clean
+
+[Boy Scout Policy](/guides/boy-scout-policy) can force cleanups on changed files or lines without editing the baseline on every PR.
+
+## Related
+
+- [Baseline format](/reference/baseline) — fields in the JSON file
+- [Boy Scout Policy](/guides/boy-scout-policy) — clean up when you edit code
+- [CI / CD](/guides/ci) — fail PRs when there are new errors

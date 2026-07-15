@@ -1,0 +1,36 @@
+---
+title: Troubleshooting
+description: Common errors and how to fix them.
+sidebar:
+  icon: life-buoy
+---
+
+## `loading baseline: ... no such file or directory`
+
+`bsr check` needs a baseline file (default `.bsr-baseline.json`). Run `bsr init` first, or pass `-b` / `--baseline` to an existing file.
+
+## `base-ref is required when boy-scout-policy is not 'off'`
+
+When policy is `file` or `hunk`, pass `--base-ref` (for example `origin/main`), or set `base_ref` in the baseline `config`.
+
+## `git diff failed`
+
+Often a shallow clone that does not contain the base ref. In CI, check out with `fetch-depth: 0`. See [CI / CD](/guides/ci).
+
+## `path is outside repository root`
+
+bsr resolves lint paths under the git repository root and rejects paths outside it. This can also happen with symlink path differences (for example macOS `/var` vs `/private/var`). Run from the repo root and use paths that resolve inside the repo.
+
+## `line N not found` / `extracting context ...`
+
+bsr reads the real source file at the reported `file:line` to compute the hash. Run bsr on the **same checkout** and working directory as the linter (usually the repository root). Lint in Docker and bsr on the host without the same files will fail here.
+
+## Exit code `1` when you expect no new issues
+
+Unparsed lines in the linter output are counted as new issues. Configure the linter to print mostly issue lines. See [Supported formats](/reference/formats) and [Supported linters](/guides/linters).
+
+Runtime errors (missing baseline, git failure, unreadable source) also exit `1`. Error text goes to stderr; new issue lines go to stdout. See [CLI](/reference/cli#exit-codes).
+
+## Boy Scout Policy does not see my edits
+
+Policy uses `git diff <base>...HEAD` and `git diff --cached` only. **Unstaged** (not `git add`ed) changes are ignored. Stage the files, or commit them, then run again.

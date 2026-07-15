@@ -1,0 +1,51 @@
+---
+title: Baseline format
+description: Structure of .bsr-baseline.json (v2).
+sidebar:
+  icon: database
+---
+
+The baseline is a JSON file. It should match the [baseline v2 JSON Schema](https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json).
+
+## Example
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json",
+  "version": 2,
+  "config": {
+    "boy_scout_policy": "hunk",
+    "base_ref": "origin/main"
+  },
+  "entries": [
+    {
+      "file": "internal/foo.go",
+      "message": "error return value not checked",
+      "source_line": "if err := do(); err != nil {",
+      "count": 1,
+      "fingerprints": {
+        "line_hash": "a1b2c3..."
+      }
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Description |
+|-------|-------------|
+| `version` | Schema version (`2`) |
+| `config` | Optional defaults for `bsr check` (policy and base ref) |
+| `entries` | Saved errors |
+| `entries[].file` | Path from the git repo root |
+| `entries[].message` | Lint message (stored for humans; not used in the match key) |
+| `entries[].source_line` | Raw source line at that location (whitespace preserved, including indent) |
+| `entries[].count` | How many matching errors may be hidden |
+| `entries[].fingerprints.line_hash` | SHA-256 of the source line after trimming leading and trailing whitespace |
+
+Matching keys on `file` + `line_hash` (see [How it works](/guides/how-it-works)). Renaming a file changes the key, so those entries no longer match.
+
+:::tip
+Commit the baseline. In PRs, review changes to `.bsr-baseline.json`. If the file grew, new errors may be getting allowed.
+:::

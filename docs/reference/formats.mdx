@@ -1,0 +1,24 @@
+---
+title: Supported formats
+description: Lint output formats that bsr can read.
+sidebar:
+  icon: file-code
+---
+
+| Format | Example | Common tools |
+|--------|---------|--------------|
+| `file:line:column: message` | `main.go:42:3: unused variable x` | golangci-lint, ESLint unix, buf, and more |
+| `file:line: message` | `main.go:42: unused variable x` | Some linters |
+| `file(line,column): message` | `main.go(42,3): unused variable x` | Visual Studio / MSBuild style |
+| `file(line): message` | `main.go(42): unused variable x` | Some tools |
+| ESLint stylish | A file path line, then indented issue lines | ESLint default output |
+
+## Unparsed lines
+
+bsr does **not** silently drop unknown output. On `bsr check`, a line that does not match any format is printed and counted as a **new issue**. That can make the run exit with code `1`.
+
+This is intentional (fail-safe): unknown output is not ignored. Configure your linter so stdout is mostly issue lines — turn off source snippets, progress, and summary banners when you can.
+
+Empty lines and known ESLint stylish extras (file path headers, the `✖ N problems` summary) are skipped and do not count.
+
+See [Supported linters](/guides/linters) for tool-specific flags.
