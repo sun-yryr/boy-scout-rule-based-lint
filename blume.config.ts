@@ -41,7 +41,6 @@ export default defineConfig({
   lastModified: true,
   deployment: {
     output: "static",
-    site: "https://sun-yryr.github.io/boy-scout-rule-based-lint",
-    base: "/boy-scout-rule-based-lint",
+    site: "https://bsr.sun-yryr.com",
   },
 });
