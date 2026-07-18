@@ -18,3 +18,8 @@ dist/
 # temporary files
 release_notes.md
 .gocache
+
+# Node / Blume docs site
+node_modules/
+.blume/
+.blume-verify/

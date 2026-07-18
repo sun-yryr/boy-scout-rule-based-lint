@@ -1,0 +1,79 @@
+---
+title: Boy Scout Policy
+description: Require cleanups on files or lines you changed.
+sidebar:
+  icon: shield
+---
+
+With the default settings, you can change a file that already has errors and still merge. Old errors stay hidden, so fixing them as you go is hard.
+
+**Boy Scout Policy** is stricter. For the files or lines you changed on this branch, bsr ignores the baseline. It reports every error in that area.
+
+## Save settings in the baseline
+
+```json
+{
+  "version": 2,
+  "config": {
+    "boy_scout_policy": "hunk",
+    "base_ref": "origin/main"
+  },
+  "entries": []
+}
+```
+
+Then you can run:
+
+```bash
+<lint-command> | bsr check
+```
+
+If you pass flags on the command line, they override the baseline `config`:
+
+```bash
+<lint-command> | bsr check --boy-scout-policy file
+```
+
+## Policies
+
+| Policy | What it does | When to use it |
+|--------|--------------|----------------|
+| `off` (default) | Baseline applies to the whole project | Normal baseline use |
+| `file` | Baseline is ignored for changed files | If you edit a file, fix all errors in that file |
+| `hunk` | Baseline is ignored only on changed lines | Only the lines you edited must be clean (good for large files) |
+| `scope` | Planned — per function or method | If you edit a function, fix that function |
+
+If the policy is not `off`, you must pass `--base-ref` (often `origin/main`), or save it in baseline `config`.
+
+## Command examples
+
+```bash
+# Report all errors in changed files
+<lint-command> | bsr check --boy-scout-policy file --base-ref origin/main
+
+# Report errors only on changed lines
+<lint-command> | bsr check --boy-scout-policy hunk --base-ref origin/main
+```
+
+## Which settings win?
+
+For `bsr check`, settings are chosen in this order:
+
+1. CLI flags (`--boy-scout-policy`, `--base-ref`), if you pass them
+2. Baseline `config`
+3. Defaults (`off`, and no `base_ref`)
+
+## How bsr finds changes
+
+bsr runs:
+
+```bash
+git diff --unified=0 <base-ref>...HEAD
+git diff --cached --unified=0
+```
+
+It combines both results. Then it turns off baseline hiding in those areas. This includes commits on the branch and staged changes.
+
+:::warning
+Boy Scout Policy needs a git repository and a valid `--base-ref`. In CI, use a full checkout (`fetch-depth: 0`) so the base ref exists.
+:::

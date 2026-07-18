@@ -1,0 +1,64 @@
+name: Linter example
+description: Share a linter command and sample output for the docs
+title: "docs(linters): "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping expand [Supported linters](https://github.com/sun-yryr/boy-scout-rule-based-lint/blob/main/docs/guides/linters.mdx).
+        We use these reports to add working examples (and to spot formats that need parser work).
+  - type: input
+    id: linter
+    attributes:
+      label: Linter
+      description: Name and version
+      placeholder: ruff 0.14.0
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: How you run the linter with bsr (`init` and/or `check`)
+      placeholder: |
+        ruff check . | bsr init
+        ruff check . | bsr check
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: sample-output
+    attributes:
+      label: Sample output
+      description: A few real issue lines from the linter (redact secrets if any)
+      placeholder: |
+        src/main.py:12:5: F841 Local variable `x` is assigned to but never used
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: flags
+    attributes:
+      label: Flags for clean stdout
+      description: Flags that hide snippets, progress, or stats so `bsr check` does not treat those lines as new issues. Write "none" if the default output is already clean.
+      placeholder: none
+    validations:
+      required: true
+  - type: dropdown
+    id: works-today
+    attributes:
+      label: Does `bsr check` parse this output today?
+      options:
+        - "Yes — issues are suppressed / reported correctly"
+        - "Partially — some lines are treated as new (unparsed)"
+        - "No — needs new format support"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra notes
+      description: Links, OS, anything else that helps reproduce
+      placeholder: Optional

@@ -1,0 +1,37 @@
+---
+title: How it works
+description: How bsr matches errors by line content and count.
+sidebar:
+  icon: cog
+---
+
+## Exact matching
+
+`bsr init` reads the source line for each error. It stores the raw line in `source_line` (indent and other whitespace kept). For the hash, it trims only leading and trailing whitespace, then computes SHA-256:
+
+```json
+{
+  "file": "internal/foo.go",
+  "message": "error return value not checked",
+  "source_line": "if err := do(); err != nil {",
+  "count": 1,
+  "fingerprints": {
+    "line_hash": "a1b2c3..."
+  }
+}
+```
+
+`bsr check` does the same. The match key is `file` + `line_hash`. If that key matches a baseline entry, bsr hides the error (up to the count limit below). The lint `message` is not part of the key — it is stored for humans only. A different message on the same line can still be hidden.
+
+Matching uses **line content**, not line numbers. Adding or deleting other lines does not break the match. Indent-only changes (for example nesting) also keep the same hash, because leading whitespace is trimmed before hashing. Edits inside the line — spaces between tokens, comments, or other text — change the hash, and the error is treated as new. Renaming the file changes the key, so the error is treated as new too.
+
+## Count limit
+
+Each baseline entry has a `count`: how many times that error was allowed. One `check` run never hides more than that number.
+
+Example: the entry has `count: 1`, but lint now reports two matching errors. The second one is reported as new.
+
+## Related
+
+- [Boy Scout Policy](/guides/boy-scout-policy) — ignore the baseline on changed areas
+- [Baseline format](/reference/baseline) — fields in the JSON file

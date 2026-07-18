@@ -1,0 +1,64 @@
+---
+title: Introduction
+description: Hide old lint errors. Report only new ones.
+sidebar:
+  order: 1
+  icon: book-open
+---
+
+**bsr** brings the Boy Scout Rule — *leave things cleaner than you found them* — to any linter.
+
+Pipe lint output into bsr. It suppresses errors already recorded in a baseline and reports only new ones. You can turn on strict lint rules even if the project already has many errors. You can also require that changed code must be clean before merge.
+
+Inspired by [PHPStan's baseline](https://phpstan.org/user-guide/baseline).
+
+<CardGroup cols={2}>
+  <Card title="Installation" href="/installation" icon="download">
+    Install with mise, go install, or build from source.
+  </Card>
+  <Card title="Quickstart" href="/quickstart" icon="rocket">
+    Create a baseline and check for new errors.
+  </Card>
+  <Card title="Boy Scout Policy" href="/guides/boy-scout-policy" icon="shield">
+    Require cleanups on files or lines you changed.
+  </Card>
+  <Card title="Managing the baseline" href="/guides/managing-baseline" icon="folder-cog">
+    Update `.bsr-baseline.json`.
+  </Card>
+</CardGroup>
+
+## Why bsr?
+
+A new lint rule often finds thousands of old errors. Teams then:
+
+- Turn the rule off forever, or
+- Fix everything in one big effort
+
+bsr gives another option:
+
+1. Start by saving existing errors as a baseline
+2. CI fails on new errors and existing errors on changed lines
+3. Old errors gradually disappear as you work
+
+## Features
+
+- **Works with many linters** — golangci-lint, ESLint, buf, and other tools that print `file:line:...`
+- **Content-based matching** — uses a SHA-256 hash of the source line, not the line number
+- **Count-based suppression cap** — never hides more copies of an error than the baseline recorded
+- **Boy Scout Policy** — for changed files or lines, ignore the baseline and report all errors there
+- **Git-native** — `--base-ref` finds changes with `base...HEAD`
+- **CI-friendly** — exits with code `1` only when there are new errors
+
+## Basic workflow
+
+```bash
+# Once: save current errors
+eslint . | bsr init
+
+# On every PR: fail on new errors and on old errors in changed lines
+eslint . | bsr check --boy-scout-policy hunk --base-ref origin/main
+```
+
+:::tip
+Commit `.bsr-baseline.json`. Try to make it smaller over time. Avoid adding new entries without a good reason. See [Managing the baseline](/guides/managing-baseline).
+:::

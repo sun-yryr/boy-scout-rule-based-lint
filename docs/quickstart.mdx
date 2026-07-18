@@ -1,0 +1,68 @@
+---
+title: Quickstart
+description: Save current lint errors, then report only new ones.
+sidebar:
+  order: 3
+  icon: rocket
+---
+
+## Initialize the baseline
+
+Pipe your linter into `bsr init`:
+
+```bash
+<lint-command> | bsr init
+```
+
+This creates `.bsr-baseline.json` with all current errors. Commit that file.
+
+The file format is defined by the [baseline v2 JSON Schema](https://raw.githubusercontent.com/sun-yryr/boy-scout-rule-based-lint/main/schema/baseline-v2.schema.json). New files include a `$schema` field with that URL.
+
+:::note
+When a terminal is available (typical local runs), `bsr init` may ask about Boy Scout Policy even if stdin is a pipe — answers are read from the TTY. In non-interactive environments such as CI (no TTY), it skips the questions and does not write `config`.
+:::
+
+## Find new errors
+
+```bash
+<lint-command> | bsr check
+```
+
+- Prints only errors that are **not** in the baseline (known ones stay hidden)
+- Exits `1` when it reports anything new, or when a runtime error occurs (missing baseline, git failure, and so on); otherwise `0`
+- Treats unparsed lines (snippets, stats banners) as new issues — configure the linter so stdout is mostly issue lines. See [Supported formats](/reference/formats)
+
+## Recommended: Turn on Boy Scout Policy
+
+With the default settings, you can edit a dirty file and merge without fixing the old errors.
+
+Policy changes that: for files or lines you changed on this branch, bsr ignores the baseline and reports every error there.
+
+```bash
+<lint-command> | bsr check \
+  --boy-scout-policy hunk \
+  --base-ref origin/main
+```
+
+You can save these defaults in `.bsr-baseline.json` so you do not need the flags every time. See [Boy Scout Policy](/guides/boy-scout-policy).
+
+## Example with golangci-lint
+
+`--output.text.print-issued-lines=false` and `--show-stats=false` strip source snippets and the stats footer. Without them, those extra lines look like new issues to `bsr check`.
+
+```bash
+golangci-lint run ./... | bsr init
+
+golangci-lint run ./... \
+  --output.text.print-issued-lines=false \
+  --show-stats=false | bsr check
+```
+
+## Example with ESLint
+
+```bash
+eslint . | bsr init
+eslint . | bsr check
+```
+
+More examples: [Supported linters](/guides/linters).

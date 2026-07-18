@@ -1,0 +1,64 @@
+---
+title: CLI
+description: Flags for bsr init and bsr check.
+sidebar:
+  icon: terminal
+---
+
+## Common options
+
+These flags work with every command:
+
+```text
+-b, --baseline string   Path to the baseline file (default: .bsr-baseline.json)
+```
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | No new issues reported |
+| `1` | New issues were reported, **or** a runtime error (missing baseline, git failure, unreadable source, and so on) |
+
+New issue lines go to **stdout**. Error messages go to **stderr**.
+
+## bsr init
+
+```bash
+<lint-command> | bsr init [flags]
+```
+
+Reads lint output from stdin. Writes (or replaces) the baseline file. Prints `Baseline created with N entries` to stderr.
+
+When a terminal is available (typical local runs), it may ask for Boy Scout Policy defaults even if stdin is a pipe — answers are read from the TTY. In non-interactive environments such as CI (no TTY), it skips the questions and does not write `config`.
+
+## bsr check
+
+```bash
+<lint-command> | bsr check [flags]
+```
+
+Requires an existing baseline file. Without one, the command fails with a runtime error (exit `1`).
+
+| Flag | Description |
+|------|-------------|
+| `--boy-scout-policy string` | `off`, `file`, or `hunk` (default: `off`). Overrides baseline config if set |
+| `--base-ref string` | Git base ref (for example `origin/main`). Required when policy is not `off`. Overrides baseline config if set |
+
+### Examples
+
+```bash
+# Use baseline config only
+eslint . | bsr check
+
+# Override policy for this run
+eslint . | bsr check --boy-scout-policy file
+
+# Set policy and base ref
+eslint . | bsr check \
+  --boy-scout-policy hunk \
+  --base-ref origin/main
+
+# Use a custom baseline path
+eslint . | bsr check -b path/to/baseline.json
+```

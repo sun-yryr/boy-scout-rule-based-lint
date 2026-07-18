@@ -1,0 +1,52 @@
+---
+title: Installation
+description: Install bsr with mise, go install, or a local build.
+sidebar:
+  order: 2
+  icon: download
+---
+
+Download a binary from [GitHub Releases](https://github.com/sun-yryr/boy-scout-rule-based-lint/releases), or install with one of these methods.
+
+<Tabs>
+  <Tab title="mise (recommended)">
+
+```bash
+mise use --pin github:sun-yryr/boy-scout-rule-based-lint
+```
+
+  </Tab>
+  <Tab title="go install">
+
+```bash
+go install github.com/sun-yryr/boy-scout-rule-based-lint/cmd/bsr@latest
+```
+
+  </Tab>
+  <Tab title="From source">
+
+```bash
+git clone https://github.com/sun-yryr/boy-scout-rule-based-lint.git
+cd boy-scout-rule-based-lint
+go build -o bsr .
+```
+
+  </Tab>
+</Tabs>
+
+Check that it works:
+
+```bash
+bsr --help
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/quickstart" icon="rocket">
+    Initialize a baseline and run your first check.
+  </Card>
+  <Card title="CI setup" href="/guides/ci" icon="git-branch">
+    Use bsr in GitHub Actions.
+  </Card>
+</CardGroup>

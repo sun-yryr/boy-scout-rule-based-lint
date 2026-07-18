@@ -1,0 +1,26 @@
+{
+  "name": "boy-scout-rule-based-lint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Documentation site for bsr, built with Blume",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build",
+    "preview": "blume preview",
+    "docs:dev": "blume dev",
+    "docs:build": "blume build",
+    "docs:preview": "blume preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sun-yryr/boy-scout-rule-based-lint.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sun-yryr/boy-scout-rule-based-lint/issues"
+  },
+  "homepage": "https://github.com/sun-yryr/boy-scout-rule-based-lint#readme",
+  "devDependencies": {
+    "blume": "^1.0.3"
+  }
+}

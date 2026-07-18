@@ -1,0 +1,119 @@
+---
+title: CI / CD
+description: GitHub Actions examples for bsr, with and without Boy Scout Policy.
+sidebar:
+  icon: git-branch
+---
+
+Add `bsr check` to your lint job. Then PRs fail only when there are **new** errors.
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | No new issues reported (old baseline errors stay hidden) |
+| `1` | New issues were reported, **or** a runtime error (missing baseline, git failure, and so on) |
+
+New issue lines go to stdout. Error messages go to stderr. Full details: [CLI — Exit codes](/reference/cli#exit-codes).
+
+## Basic — new errors only
+
+Check out the repo, let mise install bsr, run your linter, and pipe the output to `bsr check`. A shallow git clone is fine when Boy Scout Policy is off.
+
+```yaml
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          # remove the `with:` block when mise.toml in the repo already pins bsr
+          mise_toml: |
+            [tools]
+            "github:sun-yryr/boy-scout-rule-based-lint" = "latest"
+
+      - name: Lint with baseline
+        run: |
+          set +o pipefail
+          # Replace with your linter, e.g. golangci-lint / eslint / buf
+          <lint-command> | bsr check
+```
+
+## With Boy Scout Policy
+
+Policy modes need `git diff` against `--base-ref`. Check out the full history (`fetch-depth: 0`), and make sure the base ref exists (for example `origin/main`).
+
+```yaml
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: jdx/mise-action@v4
+        with:
+          # remove the `with:` block when mise.toml in the repo already pins bsr
+          mise_toml: |
+            [tools]
+            "github:sun-yryr/boy-scout-rule-based-lint" = "latest"
+
+      - name: Run linter with Boy Scout policy
+        run: |
+          set +o pipefail
+          <lint-command> | bsr check \
+            --boy-scout-policy hunk \
+            --base-ref origin/main
+```
+
+:::tip
+You can save `boy_scout_policy` and `base_ref` in `.bsr-baseline.json` `config`. Then the CI command stays short, and local runs match CI.
+:::
+
+## Install without mise
+
+If you do not use mise, install Go and bsr yourself:
+
+```yaml
+- uses: actions/setup-go@v7
+  with:
+    go-version: "1.25.x"
+
+- name: Install bsr
+  run: go install github.com/sun-yryr/boy-scout-rule-based-lint/cmd/bsr@latest
+```
+
+## golangci-lint example
+
+```yaml
+- name: golangci-lint + bsr
+  run: |
+    set +o pipefail
+    golangci-lint run ./... \
+      --output.text.print-issued-lines=false \
+      --show-stats=false | bsr check
+```
+
+## Related
+
+- [Boy Scout Policy](/guides/boy-scout-policy) — `file` vs `hunk`, and why `fetch-depth: 0` matters
+- [Managing the baseline](/guides/managing-baseline) — when to recreate the baseline in a PR
+- [Troubleshooting](/guides/troubleshooting) — common CI and local failures
