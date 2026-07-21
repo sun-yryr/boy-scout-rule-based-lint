@@ -53,6 +53,8 @@ The baseline format is defined by [baseline v2 JSON Schema](https://raw.githubus
 
 When run from an interactive terminal, `bsr init` prompts for optional Boy Scout Policy settings and stores them in the baseline `config`. In non-interactive environments (for example, when stdin is a pipe), the prompt is skipped and no `config` is written.
 
+If the baseline file already exists, `bsr init` asks whether to overwrite it. After overwrite is confirmed, it also asks whether to inherit the existing `config`; declining inheritance starts the usual Boy Scout Policy configuration prompt. If no interactive terminal is available, the existing baseline is not overwritten.
+
 ### 2. Detect new violations
 
 ```bash
